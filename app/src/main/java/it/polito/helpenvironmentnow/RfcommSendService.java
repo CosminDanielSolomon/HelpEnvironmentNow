@@ -27,6 +27,7 @@ public class RfcommSendService extends IntentService {
     private static final int MESSAGE_SIZE_CHARS = 4; // the number of chars used to represent the size of a message
     private static final int SINGLE_READ_SIZE = 1024;
     private int numberOfMessages, messageSize;
+    private byte[] messagesRead;
 
     public RfcommSendService() {
         super("Rfcomm Send Service");
@@ -50,7 +51,8 @@ public class RfcommSendService extends IntentService {
         Log.d(TAG,"Mac address from intent: " + remoteDeviceMacAddress);
         boolean result = connectAndReadFromRaspberry(remoteDeviceMacAddress);
         if(result)
-            connectAndSendToServer();
+            //connectAndSendToServer();
+            Log.d(TAG, "onHandleIntent(...) data:" + messagesRead);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -92,7 +94,7 @@ public class RfcommSendService extends IntentService {
     private void readMessages(InputStream socketInputStream) throws IOException {
         readMetaDataMessages(socketInputStream);
         int totalDataSize = numberOfMessages * messageSize;
-        byte[] messagesRead = new byte[totalDataSize];
+        messagesRead = new byte[totalDataSize];
 
         Log.d(TAG, "in readMessages() totalDataSize:"+totalDataSize);
         int currentDataSize = 0, bytesRead;

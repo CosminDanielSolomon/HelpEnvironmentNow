@@ -68,17 +68,12 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
         // if you want the Activity to launch every single time beacons come into view, remove this call.
         //regionBootstrap.disable();
 
-        /*Intent intent = new Intent(this, RfcommSendService.class);
-        Log.d(TAG, "remoteMacAddress:" + remoteMacAddress);
-        intent.putExtra("remoteMacAddress", remoteMacAddress);
-        ContextCompat.startForegroundService(this, intent);
-        Log.d(TAG, "startService(...) performed");*/
-        Intent intent = new Intent(this, MainActivity.class);
+        //Intent intent = new Intent(this, MainActivity.class);
         // IMPORTANT: in the AndroidManifest.xml definition of this activity, you must set android:launchMode="singleInstance" or you will get two instances
         // created when a user launches the activity manually and it gets launched from here.
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        Log.d(TAG, "didEnterRegion Launching activity");
-        this.startActivity(intent);
+        //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        //Log.d(TAG, "didEnterRegion Launching activity");
+        //this.startActivity(intent);
     }
 
     @Override
