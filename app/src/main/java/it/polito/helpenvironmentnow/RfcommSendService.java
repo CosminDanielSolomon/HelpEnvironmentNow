@@ -4,7 +4,6 @@ import android.app.IntentService;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
@@ -18,12 +17,16 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 
 public class RfcommSendService extends IntentService {
 
     private String TAG = "RfcommSendService";
-    private static final String CHANNEL_ID = "ForegroundServiceChannel";
+    private static final int NUMBER_OF_MESSAGES_CHARS = 8; // the number of chars used to represent the total number of messages
+    private static final int MESSAGE_SIZE_CHARS = 4; // the number of chars used to represent the size of a message
+    private static final int SINGLE_READ_SIZE = 1024;
+    private int numberOfMessages, messageSize;
 
     public RfcommSendService() {
         super("Rfcomm Send Service");
@@ -41,63 +44,9 @@ public class RfcommSendService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         Log.d(TAG, "onHandleIntent(...) called");
-        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if(bluetoothAdapter == null)
-            Log.d(TAG, "bluetoothAdapter is NULL");
-        else {
-            String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
-            Log.d(TAG,"Mac address from intent: " + remoteDeviceMacAddress);
-            BluetoothDevice remoteDevice = bluetoothAdapter.getRemoteDevice(remoteDeviceMacAddress);
-            try {
-                BluetoothSocket socket = (BluetoothSocket) BluetoothDevice.class.getMethod("createInsecureRfcommSocket", int.class).
-                        invoke(remoteDevice, 1);
-                if(socket == null)
-                    Log.d(TAG, "socket is NULL");
-                else {
-                    bluetoothAdapter.cancelDiscovery();
-                    int retry = 3, attempt = 1;
-                    boolean connected = false;
-                    while(attempt <= retry && !connected) {
-                        try {
-                            Log.d(TAG, "Socket connecting attempt:" + attempt);
-                            socket.connect();
-                            connected = true;
-                            byte[] buffer = new byte[19];
-                            int bytes; // = socket.getInputStream().read(buffer); // bytes returned from read
-                            //int itemCount = Integer.parseInt(new String(buffer, 0, bytes));
-                            //int currentCount = 0;
-                            while ((bytes = socket.getInputStream().read(buffer)) != -1) {
-                                String item = new String(buffer, 0, bytes);
-                                Log.d(TAG, "Read from server: " + bytes + " bytes->" + item);
-                                long time = Long.parseLong(item.substring(0, 10));
-                                double temp = Double.parseDouble(item.substring(10, 15));
-                                double hum = Double.parseDouble(item.substring(15, 19));
-                                Log.d(TAG, "Time:" + time + " Temperature:" + temp + " Humidity:" + hum);
-                                //currentCount++;
-                            }
-                        } catch (IOException e) {
-                            SystemClock.sleep(500);
-                            Log.d(TAG, "Error in creating socket!");
-                            e.printStackTrace();
-                            attempt++;
-                        } finally {
-                            try {
-                                socket.close();
-                                Log.d(TAG, "Socket closed.");
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-                }
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
-            } catch (NoSuchMethodException e) {
-                e.printStackTrace();
-            }
-        }
+        String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
+        Log.d(TAG,"Mac address from intent: " + remoteDeviceMacAddress);
+        connectAndReadFromRaspberry(remoteDeviceMacAddress);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -120,4 +69,86 @@ public class RfcommSendService extends IntentService {
                 .build();
         startForeground(1, notification);
     }
+
+    // This method reads the number of messages that follows and their size and sets the private
+    // variables numberOfMessages and messageSize
+    private void readMetaDataMessages(InputStream socketInputStream) throws IOException {
+        byte[] buffer = new byte[NUMBER_OF_MESSAGES_CHARS + MESSAGE_SIZE_CHARS];
+        int bytes_read = 0;
+
+        do {
+            bytes_read += socketInputStream.read(buffer, bytes_read, NUMBER_OF_MESSAGES_CHARS + MESSAGE_SIZE_CHARS - bytes_read);
+        } while(bytes_read < NUMBER_OF_MESSAGES_CHARS + MESSAGE_SIZE_CHARS);
+        numberOfMessages = Integer.parseInt(buffer.toString().substring(0,NUMBER_OF_MESSAGES_CHARS));
+        messageSize = Integer.parseInt(buffer.toString().substring(NUMBER_OF_MESSAGES_CHARS, NUMBER_OF_MESSAGES_CHARS + MESSAGE_SIZE_CHARS));
+        Log.d(TAG,"in readMetaDataMessages() numberOfMessages:"+numberOfMessages);
+        Log.d(TAG,"in readMetaDataMessages() messageSize:"+messageSize);
+    }
+
+    private void readMessages(InputStream socketInputStream) throws IOException {
+        readMetaDataMessages(socketInputStream);
+        int totalDataSize = numberOfMessages * messageSize;
+        byte[] messagesRead = new byte[totalDataSize];
+
+        Log.d(TAG, "in readMessages() totalDataSize:"+totalDataSize);
+        int currentDataSize = 0, bytesRead;
+        int singleReadSize = SINGLE_READ_SIZE;
+        while(currentDataSize < totalDataSize) {
+            if((totalDataSize - currentDataSize) < SINGLE_READ_SIZE)
+                singleReadSize = totalDataSize - currentDataSize;
+            bytesRead = socketInputStream.read(messagesRead, currentDataSize, singleReadSize);
+            if(bytesRead != -1)
+                currentDataSize += bytesRead;
+            Log.d(TAG, "in readMessages():" + bytesRead + "currentDataSize:" + currentDataSize);
+        }
+    }
+
+    private void connectAndReadFromRaspberry(String remoteDeviceMacAddress) {
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if(bluetoothAdapter == null)
+            Log.d(TAG, "bluetoothAdapter is NULL");
+        else {
+            BluetoothDevice remoteDevice = bluetoothAdapter.getRemoteDevice(remoteDeviceMacAddress);
+            try {
+                BluetoothSocket socket = (BluetoothSocket) BluetoothDevice.class.getMethod(
+                        "createInsecureRfcommSocket", int.class).invoke(remoteDevice, 1);
+                if(socket == null)
+                    Log.d(TAG, "socket is NULL");
+                else {
+                    bluetoothAdapter.cancelDiscovery();
+                    int retry = 3, attempt = 1;
+                    boolean connected = false;
+                    while(attempt <= retry && !connected) {
+                        try {
+                            Log.d(TAG, "Socket connecting attempt:" + attempt);
+                            socket.connect();
+                            connected = true;
+                            InputStream socketInputStream = socket.getInputStream();
+                            readMessages(socketInputStream);
+                        } catch (IOException e) {
+                            SystemClock.sleep(500);
+                            Log.d(TAG, "Error with the socket or input stream read!");
+                            e.printStackTrace();
+                            attempt++;
+                        } finally {
+                            try {
+                                socket.close();
+                                Log.d(TAG, "Socket closed.");
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
+            } catch (NoSuchMethodException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void connectAndSendToServer() {}
 }
