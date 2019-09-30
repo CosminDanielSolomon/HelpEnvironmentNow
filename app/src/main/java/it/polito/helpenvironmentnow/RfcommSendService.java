@@ -35,10 +35,12 @@ public class RfcommSendService extends IntentService {
     @Override
     public void onCreate() {
         super.onCreate();
+        // A foreground service in order to work in Android has to show a notification, as quoted by
+        // the official guide: "Foreground services must display a Notification."
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            startMyOwnForeground();
+            startMyOwnForeground(); // put the service in a foreground state
         else
-            startForeground(1, new Notification());
+            startForeground(1, new Notification()); // put the service in a foreground state
     }
 
     @Override
@@ -46,13 +48,15 @@ public class RfcommSendService extends IntentService {
         Log.d(TAG, "onHandleIntent(...) called");
         String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
         Log.d(TAG,"Mac address from intent: " + remoteDeviceMacAddress);
-        connectAndReadFromRaspberry(remoteDeviceMacAddress);
+        boolean result = connectAndReadFromRaspberry(remoteDeviceMacAddress);
+        if(result)
+            connectAndSendToServer();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void startMyOwnForeground(){
-        String NOTIFICATION_CHANNEL_ID = "com.example.simpleapp";
-        String channelName = "My Background Service";
+        String NOTIFICATION_CHANNEL_ID = "it.polito.helpenvironmentnow";
+        String channelName = "Background HelpEnvironmentNow Service";
         NotificationChannel chan = new NotificationChannel(NOTIFICATION_CHANNEL_ID, channelName, NotificationManager.IMPORTANCE_NONE);
         chan.setLightColor(Color.BLUE);
         chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
@@ -63,7 +67,7 @@ public class RfcommSendService extends IntentService {
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID);
         Notification notification = notificationBuilder.setOngoing(true)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentTitle("App is running in background")
+                .setContentTitle("HelpEnvironmentNow is running in background")
                 .setPriority(NotificationManager.IMPORTANCE_MIN)
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .build();
@@ -103,7 +107,8 @@ public class RfcommSendService extends IntentService {
         }
     }
 
-    private void connectAndReadFromRaspberry(String remoteDeviceMacAddress) {
+    // This method returns TRUE if all the data has ben received and it is ready to be sent to the server
+    private boolean connectAndReadFromRaspberry(String remoteDeviceMacAddress) {
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter == null)
             Log.d(TAG, "bluetoothAdapter is NULL");
@@ -125,8 +130,10 @@ public class RfcommSendService extends IntentService {
                             connected = true;
                             InputStream socketInputStream = socket.getInputStream();
                             readMessages(socketInputStream);
+                            return true;
                         } catch (IOException e) {
-                            SystemClock.sleep(500);
+                            if(attempt < 3)
+                                SystemClock.sleep(1000);
                             Log.d(TAG, "Error with the socket or input stream read!");
                             e.printStackTrace();
                             attempt++;
@@ -148,6 +155,7 @@ public class RfcommSendService extends IntentService {
                 e.printStackTrace();
             }
         }
+        return false;
     }
 
     private void connectAndSendToServer() {}
