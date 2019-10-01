@@ -19,13 +19,14 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 
 public class RfcommSendService extends IntentService {
 
-    private String TAG = "RfcommSendService";
+    private String TAG = "AppHelpNow";
     private static final int NUMBER_OF_MESSAGES_CHARS = 8; // the number of chars used to represent the total number of messages
     private static final int MESSAGE_SIZE_CHARS = 4; // the number of chars used to represent the size of a message
-    private static final int SINGLE_READ_SIZE = 1024;
+    private static final int SINGLE_READ_SIZE = 1024; // bytes to read with a single call to "read()" - the same size on server side(SINGLE_WRITE_SIZE)
     private int numberOfMessages, messageSize;
     private byte[] messagesRead;
 
@@ -52,7 +53,7 @@ public class RfcommSendService extends IntentService {
         boolean result = connectAndReadFromRaspberry(remoteDeviceMacAddress);
         if(result)
             //connectAndSendToServer();
-            Log.d(TAG, "onHandleIntent(...) data:" + messagesRead);
+            Log.d(TAG, "onHandleIntent(...) data:" + Arrays.toString(messagesRead));
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -85,8 +86,9 @@ public class RfcommSendService extends IntentService {
         do {
             bytes_read += socketInputStream.read(buffer, bytes_read, NUMBER_OF_MESSAGES_CHARS + MESSAGE_SIZE_CHARS - bytes_read);
         } while(bytes_read < NUMBER_OF_MESSAGES_CHARS + MESSAGE_SIZE_CHARS);
-        numberOfMessages = Integer.parseInt(buffer.toString().substring(0,NUMBER_OF_MESSAGES_CHARS));
-        messageSize = Integer.parseInt(buffer.toString().substring(NUMBER_OF_MESSAGES_CHARS, NUMBER_OF_MESSAGES_CHARS + MESSAGE_SIZE_CHARS));
+        String strMessages = new String(buffer);
+        numberOfMessages = Integer.parseInt(strMessages.substring(0,NUMBER_OF_MESSAGES_CHARS));
+        messageSize = Integer.parseInt(strMessages.substring(NUMBER_OF_MESSAGES_CHARS, NUMBER_OF_MESSAGES_CHARS + MESSAGE_SIZE_CHARS));
         Log.d(TAG,"in readMetaDataMessages() numberOfMessages:"+numberOfMessages);
         Log.d(TAG,"in readMetaDataMessages() messageSize:"+messageSize);
     }
