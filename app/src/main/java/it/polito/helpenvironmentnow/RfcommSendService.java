@@ -24,6 +24,8 @@ import java.util.Arrays;
 public class RfcommSendService extends IntentService {
 
     private String TAG = "AppHelpNow";
+    private static final int MAX_ATTEMPTS = 10; // the max number to retry establish bluetooth connection if fails
+    private static final int BLUETOOTH_MSECONDS_SLEEP = 3000; // milliseconds to sleep after connection fails
     private static final int NUMBER_OF_MESSAGES_CHARS = 8; // the number of chars used to represent the total number of messages
     private static final int MESSAGE_SIZE_CHARS = 4; // the number of chars used to represent the size of a message
     private static final int SINGLE_READ_SIZE = 1024; // bytes to read with a single call to "read()" - the same size on server side(SINGLE_WRITE_SIZE)
@@ -119,35 +121,32 @@ public class RfcommSendService extends IntentService {
         else {
             BluetoothDevice remoteDevice = bluetoothAdapter.getRemoteDevice(remoteDeviceMacAddress);
             try {
-                BluetoothSocket socket = (BluetoothSocket) BluetoothDevice.class.getMethod(
-                        "createInsecureRfcommSocket", int.class).invoke(remoteDevice, 1);
-                if(socket == null)
-                    Log.d(TAG, "socket is NULL");
-                else {
-                    bluetoothAdapter.cancelDiscovery();
-                    int retry = 3, attempt = 1;
-                    boolean connected = false;
-                    while(attempt <= retry && !connected) {
+                bluetoothAdapter.cancelDiscovery();
+                int attempt = 1;
+                boolean connected = false;
+                while(attempt <= MAX_ATTEMPTS && !connected) {
+                    BluetoothSocket socket = (BluetoothSocket) BluetoothDevice.class.getMethod(
+                            "createInsecureRfcommSocket", int.class).invoke(remoteDevice, 1);
+                    if(socket == null) Log.d(TAG, "socket is NULL");
+                    try {
+                        Log.d(TAG, "Socket connecting attempt:" + attempt);
+                        socket.connect();
+                        connected = true;
+                        InputStream socketInputStream = socket.getInputStream();
+                        readMessages(socketInputStream);
+                        return true;
+                    } catch (IOException e) {
+                        if(attempt < MAX_ATTEMPTS)
+                            SystemClock.sleep(BLUETOOTH_MSECONDS_SLEEP);
+                        Log.d(TAG, "Error with the socket or input stream read!");
+                        e.printStackTrace();
+                        attempt++;
+                    } finally {
                         try {
-                            Log.d(TAG, "Socket connecting attempt:" + attempt);
-                            socket.connect();
-                            connected = true;
-                            InputStream socketInputStream = socket.getInputStream();
-                            readMessages(socketInputStream);
-                            return true;
+                            socket.close();
+                            Log.d(TAG, "Socket closed.");
                         } catch (IOException e) {
-                            if(attempt < 3)
-                                SystemClock.sleep(1000);
-                            Log.d(TAG, "Error with the socket or input stream read!");
                             e.printStackTrace();
-                            attempt++;
-                        } finally {
-                            try {
-                                socket.close();
-                                Log.d(TAG, "Socket closed.");
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
                         }
                     }
                 }
