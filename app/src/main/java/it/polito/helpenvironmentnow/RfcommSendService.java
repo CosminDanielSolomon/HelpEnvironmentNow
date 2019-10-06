@@ -120,11 +120,12 @@ public class RfcommSendService extends IntentService {
             Log.d(TAG, "bluetoothAdapter is NULL");
         else {
             BluetoothDevice remoteDevice = bluetoothAdapter.getRemoteDevice(remoteDeviceMacAddress);
-            bluetoothAdapter.cancelDiscovery();
+            int attempt = 1;
+            boolean connected = false;
             try {
-                int attempt = 1;
-                boolean connected = false;
                 while(attempt <= MAX_CONNNECTION_ATTEMPTS && !connected) {
+                    if(bluetoothAdapter.isDiscovering())
+                        bluetoothAdapter.cancelDiscovery();
                     BluetoothSocket socket = (BluetoothSocket) BluetoothDevice.class.getMethod(
                             "createInsecureRfcommSocket", int.class).invoke(remoteDevice, 1);
                     if(socket != null) {
