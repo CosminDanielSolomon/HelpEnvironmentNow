@@ -117,49 +117,50 @@ public class RfcommSendService extends IntentService {
     private boolean connectAndReadFromRaspberry(String remoteDeviceMacAddress) {
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter == null)
-            Log.d(TAG, "bluetoothAdapter is NULL");
+            Log.e(TAG, "bluetoothAdapter is NULL");
         else {
             BluetoothDevice remoteDevice = bluetoothAdapter.getRemoteDevice(remoteDeviceMacAddress);
-            int attempt = 1;
-            boolean connected = false;
+            BluetoothSocket socket = null;
             try {
-                while(attempt <= MAX_CONNNECTION_ATTEMPTS && !connected) {
-                    if(bluetoothAdapter.isDiscovering())
-                        bluetoothAdapter.cancelDiscovery();
-                    BluetoothSocket socket = (BluetoothSocket) BluetoothDevice.class.getMethod(
-                            "createInsecureRfcommSocket", int.class).invoke(remoteDevice, 1);
-                    if(socket != null) {
-                        try {
-                            Log.d(TAG, "Socket connecting attempt:" + attempt);
-                            socket.connect();
-                            connected = true;
-                            InputStream socketInputStream = socket.getInputStream();
-                            readMessages(socketInputStream);
-                            return true;
-                        } catch (IOException e) {
-                            if (attempt < MAX_CONNNECTION_ATTEMPTS)
-                                SystemClock.sleep(BLUETOOTH_MSECONDS_SLEEP);
-                            Log.d(TAG, "Error with the socket or input stream read!");
-                            e.printStackTrace();
-                            attempt++;
-                        } finally {
-                            try {
-                                socket.close();
-                                Log.d(TAG, "Socket closed.");
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    } else {
-                        Log.e(TAG, "socket is NULL");
-                    }
-                }
+                socket = (BluetoothSocket) BluetoothDevice.class.getMethod(
+                        "createInsecureRfcommSocket", int.class).invoke(remoteDevice, 1);
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             } catch (InvocationTargetException e) {
                 e.printStackTrace();
             } catch (NoSuchMethodException e) {
                 e.printStackTrace();
+            }
+            if(socket != null) {
+                int attempt = 1;
+                boolean connected = false;
+                if (bluetoothAdapter.isDiscovering())
+                    bluetoothAdapter.cancelDiscovery();
+                while (attempt <= MAX_CONNNECTION_ATTEMPTS && !connected) {
+                    try {
+                        Log.d(TAG, "Socket connecting attempt:" + attempt);
+                        socket.connect();
+                        connected = true;
+                        InputStream socketInputStream = socket.getInputStream();
+                        readMessages(socketInputStream);
+                        return true;
+                    } catch (IOException e) {
+                        if (attempt < MAX_CONNNECTION_ATTEMPTS)
+                            SystemClock.sleep(BLUETOOTH_MSECONDS_SLEEP);
+                        Log.d(TAG, "Socket connect error!");
+                        e.printStackTrace();
+                        attempt++;
+                    } finally {
+                        try {
+                            if(socket.isConnected()) {
+                                socket.close();
+                                Log.d(TAG, "Socket connected. I close it.");
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
             }
         }
         return false;
