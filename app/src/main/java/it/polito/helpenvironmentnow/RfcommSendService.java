@@ -113,7 +113,7 @@ public class RfcommSendService extends IntentService {
         }
     }
 
-    // This method returns TRUE if all the data has ben received and are ready to be sent to the server
+    // This method returns TRUE if all the data has ben received and is ready to be sent to the server
     private boolean connectAndReadFromRaspberry(String remoteDeviceMacAddress) {
         boolean read = false;
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -136,40 +136,35 @@ public class RfcommSendService extends IntentService {
                 int attempt = 1;
                 if (bluetoothAdapter.isDiscovering())
                     bluetoothAdapter.cancelDiscovery();
-                while (attempt <= MAX_CONNNECTION_ATTEMPTS && !read) {
+                while (attempt <= MAX_CONNNECTION_ATTEMPTS && !socket.isConnected()) {
                     try {
                         Log.d(TAG, "Socket connect() attempt:" + attempt);
                         socket.connect();
                     } catch (IOException e) {
                         Log.d(TAG, "Socket connect() failed!");
                         e.printStackTrace();
-                        try {
-                            socket.close();
-                        } catch (IOException e1) {
-                            e1.printStackTrace();
-                        }
                         if (attempt < MAX_CONNNECTION_ATTEMPTS)
                             SystemClock.sleep(BLUETOOTH_MSECONDS_SLEEP); // sleep before retry to connect
                     }
-                    if(socket.isConnected()) {
-                        Log.d(TAG, "Socket connected!");
+                    attempt++;
+                }
+                if(socket.isConnected()) {
+                    Log.d(TAG, "Socket connected!");
+                    try {
+                        InputStream socketInputStream = socket.getInputStream();
+                        readMessages(socketInputStream);
+                        read = true;
+                    } catch (IOException e) {
+                        Log.e(TAG, "Read from socket failed!");
+                        e.printStackTrace();
+                    } finally {
                         try {
-                            InputStream socketInputStream = socket.getInputStream();
-                            readMessages(socketInputStream);
-                            read = true;
+                            Log.d(TAG, "Socket connected. I close it.");
+                            socket.close();
                         } catch (IOException e) {
-                            Log.d(TAG, "Read from socket failed!");
                             e.printStackTrace();
-                        } finally {
-                            try {
-                                Log.d(TAG, "Socket connected. I close it.");
-                                socket.close();
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
                         }
                     }
-                    attempt++;
                 }
             }
         }
