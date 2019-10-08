@@ -115,6 +115,7 @@ public class RfcommSendService extends IntentService {
 
     // This method returns TRUE if all the data has ben received and are ready to be sent to the server
     private boolean connectAndReadFromRaspberry(String remoteDeviceMacAddress) {
+        boolean read = false;
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter == null)
             Log.e(TAG, "bluetoothAdapter is NULL");
@@ -133,37 +134,41 @@ public class RfcommSendService extends IntentService {
             }
             if(socket != null) {
                 int attempt = 1;
-                boolean connected = false;
                 if (bluetoothAdapter.isDiscovering())
                     bluetoothAdapter.cancelDiscovery();
-                while (attempt <= MAX_CONNNECTION_ATTEMPTS && !connected) {
+                while (attempt <= MAX_CONNNECTION_ATTEMPTS && !read) {
                     try {
-                        Log.d(TAG, "Socket connecting attempt:" + attempt);
+                        Log.d(TAG, "Socket connect() attempt:" + attempt);
                         socket.connect();
-                        connected = true;
-                        InputStream socketInputStream = socket.getInputStream();
-                        readMessages(socketInputStream);
-                        return true;
                     } catch (IOException e) {
-                        if (attempt < MAX_CONNNECTION_ATTEMPTS)
-                            SystemClock.sleep(BLUETOOTH_MSECONDS_SLEEP);
-                        Log.d(TAG, "Socket connect error!");
+                        Log.d(TAG, "Socket connect() failed!");
                         e.printStackTrace();
-                        attempt++;
-                    } finally {
+                        if (attempt < MAX_CONNNECTION_ATTEMPTS)
+                            SystemClock.sleep(BLUETOOTH_MSECONDS_SLEEP); // sleep before retry to connect
+                    }
+                    if(socket.isConnected()) {
+                        Log.d(TAG, "Socket connected!");
                         try {
-                            if(socket.isConnected()) {
-                                socket.close();
-                                Log.d(TAG, "Socket connected. I close it.");
-                            }
+                            InputStream socketInputStream = socket.getInputStream();
+                            readMessages(socketInputStream);
+                            read = true;
                         } catch (IOException e) {
+                            Log.d(TAG, "Read from socket failed!");
                             e.printStackTrace();
+                        } finally {
+                            try {
+                                Log.d(TAG, "Socket connected. I close it.");
+                                socket.close();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
                         }
                     }
+                    attempt++;
                 }
             }
         }
-        return false;
+        return read;
     }
 
     private void connectAndSendToServer() {}
