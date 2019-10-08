@@ -43,7 +43,7 @@ public class RfcommSendService extends IntentService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) // check if Android version is 8 or higher
             startMyOwnForeground(); // put the service in a foreground state - for Android 8+
         else
-            startForeground(1, new Notification()); // put the service in a foreground state - until Android 7
+            startForeground(1, new Notification()); // put the service in a foreground state - for Android 7 or below
     }
 
     @Override
@@ -143,6 +143,11 @@ public class RfcommSendService extends IntentService {
                     } catch (IOException e) {
                         Log.d(TAG, "Socket connect() failed!");
                         e.printStackTrace();
+                        try {
+                            socket.close();
+                        } catch (IOException e1) {
+                            e1.printStackTrace();
+                        }
                         if (attempt < MAX_CONNNECTION_ATTEMPTS)
                             SystemClock.sleep(BLUETOOTH_MSECONDS_SLEEP); // sleep before retry to connect
                     }
