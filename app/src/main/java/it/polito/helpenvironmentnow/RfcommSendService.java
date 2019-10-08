@@ -28,6 +28,7 @@ public class RfcommSendService extends IntentService {
     private static final int NUMBER_OF_MESSAGES_CHARS = 8; // the number of chars used to represent the total number of messages
     private static final int MESSAGE_SIZE_CHARS = 4; // the number of chars used to represent the size of a message
     private static final int SINGLE_READ_SIZE = 1024; // bytes to read with a single call to "read()" - the same size on server side(SINGLE_WRITE_SIZE)
+    private BluetoothAdapter bluetoothAdapter;
     private int numberOfMessages, messageSize; // these fields will be set inside "readMetaDataMessages" after receiving them from raspberry
     private byte[] messagesRead; // contains the sensor data(with timestamps) received from raspberry
 
@@ -48,13 +49,16 @@ public class RfcommSendService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
-        Log.d(TAG,"Mac address from intent: " + remoteDeviceMacAddress);
-        boolean result = connectAndReadFromRaspberry(remoteDeviceMacAddress);
-        if(result) {
-            //connectAndSendToServer();
-            String sb = new String(messagesRead);
-            Log.d(TAG, "onHandleIntent(...) data:" + sb);
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if(bluetoothAdapter != null) {
+            String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
+            Log.d(TAG, "Mac address from intent: " + remoteDeviceMacAddress);
+            boolean result = connectAndReadFromRaspberry(remoteDeviceMacAddress);
+            if (result) {
+                //connectAndSendToServer();
+                String sb = new String(messagesRead);
+                Log.d(TAG, "onHandleIntent(...) data:" + sb);
+            }
         }
     }
 
@@ -113,15 +117,11 @@ public class RfcommSendService extends IntentService {
         }
     }
 
-    // This method returns TRUE if all the data has ben received and is ready to be sent to the server
-    private boolean connectAndReadFromRaspberry(String remoteDeviceMacAddress) {
-        boolean read = false;
-        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if(bluetoothAdapter == null)
-            Log.e(TAG, "bluetoothAdapter is NULL");
-        else {
-            BluetoothDevice remoteDevice = bluetoothAdapter.getRemoteDevice(remoteDeviceMacAddress);
-            BluetoothSocket socket = null;
+    private BluetoothSocket getBluetoothSocketByReflection(String remoteDeviceMacAddress) {
+        BluetoothDevice remoteDevice;
+        BluetoothSocket socket = null;
+        if(BluetoothAdapter.checkBluetoothAddress(remoteDeviceMacAddress)) {
+            remoteDevice = bluetoothAdapter.getRemoteDevice(remoteDeviceMacAddress);
             try {
                 socket = (BluetoothSocket) BluetoothDevice.class.getMethod(
                         "createInsecureRfcommSocket", int.class).invoke(remoteDevice, 1);
@@ -132,38 +132,47 @@ public class RfcommSendService extends IntentService {
             } catch (NoSuchMethodException e) {
                 e.printStackTrace();
             }
-            if(socket != null) {
-                int attempt = 1;
-                if (bluetoothAdapter.isDiscovering())
-                    bluetoothAdapter.cancelDiscovery();
-                while (attempt <= MAX_CONNNECTION_ATTEMPTS && !socket.isConnected()) {
-                    try {
-                        Log.d(TAG, "Socket connect() attempt:" + attempt);
-                        socket.connect();
-                    } catch (IOException e) {
-                        Log.d(TAG, "Socket connect() failed!");
-                        e.printStackTrace();
-                        if (attempt < MAX_CONNNECTION_ATTEMPTS)
-                            SystemClock.sleep(BLUETOOTH_MSECONDS_SLEEP); // sleep before retry to connect
-                    }
-                    attempt++;
+        }
+
+        return socket;
+    }
+
+    // This method returns TRUE if all the data has ben received and is ready to be sent to the server
+    private boolean connectAndReadFromRaspberry(String remoteDeviceMacAddress) {
+        boolean read = false;
+
+        BluetoothSocket socket = getBluetoothSocketByReflection(remoteDeviceMacAddress);
+        if(socket != null) {
+            int attempt = 1;
+            if (bluetoothAdapter.isDiscovering())
+                bluetoothAdapter.cancelDiscovery();
+            while (attempt <= MAX_CONNNECTION_ATTEMPTS && !socket.isConnected()) {
+                try {
+                    Log.d(TAG, "Socket connect() attempt:" + attempt);
+                    socket.connect();
+                } catch (IOException e) {
+                    Log.d(TAG, "Socket connect() failed!");
+                    e.printStackTrace();
+                    if (attempt < MAX_CONNNECTION_ATTEMPTS)
+                        SystemClock.sleep(BLUETOOTH_MSECONDS_SLEEP); // sleep before retry to connect
                 }
-                if(socket.isConnected()) {
-                    Log.d(TAG, "Socket connected!");
+                attempt++;
+            }
+            if(socket.isConnected()) {
+                Log.d(TAG, "Socket connected!");
+                try {
+                    InputStream socketInputStream = socket.getInputStream();
+                    readMessages(socketInputStream);
+                    read = true;
+                } catch (IOException e) {
+                    Log.e(TAG, "Read from socket failed!");
+                    e.printStackTrace();
+                } finally {
                     try {
-                        InputStream socketInputStream = socket.getInputStream();
-                        readMessages(socketInputStream);
-                        read = true;
+                        Log.d(TAG, "Socket connected. I close it.");
+                        socket.close();
                     } catch (IOException e) {
-                        Log.e(TAG, "Read from socket failed!");
                         e.printStackTrace();
-                    } finally {
-                        try {
-                            Log.d(TAG, "Socket connected. I close it.");
-                            socket.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
                     }
                 }
             }
