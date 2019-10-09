@@ -87,13 +87,15 @@ public class RfcommSendService extends IntentService {
     // variables numberOfMessages and messageSize
     private void readMetaDataMessages(InputStream socketInputStream) throws IOException {
         byte[] buffer = new byte[NUMBER_OF_MESSAGES_CHARS + MESSAGE_SIZE_CHARS];
-        int bytes_read = 0;
+        int resultRead, bytesRead = 0;
 
         do {
-            bytes_read += socketInputStream.read(buffer, bytes_read, NUMBER_OF_MESSAGES_CHARS + MESSAGE_SIZE_CHARS - bytes_read);
-        } while(bytes_read < NUMBER_OF_MESSAGES_CHARS + MESSAGE_SIZE_CHARS);
+            resultRead = socketInputStream.read(buffer, bytesRead, NUMBER_OF_MESSAGES_CHARS + MESSAGE_SIZE_CHARS - bytesRead);
+            if(resultRead != -1)
+                bytesRead += resultRead;
+        } while(bytesRead < NUMBER_OF_MESSAGES_CHARS + MESSAGE_SIZE_CHARS && bytesRead != -1);
         String strMessages = new String(buffer);
-        numberOfMessages = Integer.parseInt(strMessages.substring(0,NUMBER_OF_MESSAGES_CHARS));
+        numberOfMessages = Integer.parseInt(strMessages.substring(0, NUMBER_OF_MESSAGES_CHARS));
         messageSize = Integer.parseInt(strMessages.substring(NUMBER_OF_MESSAGES_CHARS, NUMBER_OF_MESSAGES_CHARS + MESSAGE_SIZE_CHARS));
         Log.d(TAG,"readMetaDataMessages() numberOfMessages:" + numberOfMessages + " messageSize:" + messageSize);
     }
@@ -105,9 +107,9 @@ public class RfcommSendService extends IntentService {
         messagesRead = new byte[totalDataSize];
 
         Log.d(TAG, "readMessages() totalDataSize:"+totalDataSize);
-        int currentDataSize = 0, bytesRead;
+        int currentDataSize = 0, bytesRead = 0;
         int singleReadSize = SINGLE_READ_SIZE;
-        while(currentDataSize < totalDataSize) {
+        while(currentDataSize < totalDataSize && bytesRead != -1) {
             if((totalDataSize - currentDataSize) < SINGLE_READ_SIZE)
                 singleReadSize = totalDataSize - currentDataSize;
             bytesRead = socketInputStream.read(messagesRead, currentDataSize, singleReadSize);
