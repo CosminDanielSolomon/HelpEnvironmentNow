@@ -2,12 +2,16 @@ package it.polito.helpenvironmentnow;
 
 import android.Manifest;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -19,6 +23,18 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Log.d(TAG, "Main Activity onCreate(...) eseguito");
+        /* TODO remove this part */
+        Button btnConnect = findViewById(R.id.buttonConnect);
+        btnConnect.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getApplicationContext(), MainService.class);
+                intent.putExtra("remoteMacAddress", "B8:27:EB:C4:15:D6");
+                ContextCompat.startForegroundService(getApplicationContext(), intent);
+                Log.d(TAG, "startService(...) performed");
+            }
+        });
+        /* TODO remove this part */
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             // Android M Permission check 
             if (this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {

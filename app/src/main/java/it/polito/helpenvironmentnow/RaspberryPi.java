@@ -1,26 +1,16 @@
 package it.polito.helpenvironmentnow;
 
-import android.app.IntentService;
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
-import android.content.Context;
-import android.content.Intent;
-import android.graphics.Color;
-import android.os.Build;
 import android.os.SystemClock;
-import android.support.annotation.RequiresApi;
-import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 
-public class RfcommSendService extends IntentService {
+public class RaspberryPi {
 
     private String TAG = "AppHelpNow";
     private static final int MAX_CONNNECTION_ATTEMPTS = 10; // the max number to retry establish bluetooth connection if fails
@@ -32,55 +22,31 @@ public class RfcommSendService extends IntentService {
     private int numberOfMessages, messageSize; // these fields will be set inside "readMetaDataMessages" after receiving them from raspberry
     private byte[] messagesRead; // contains the sensor data(with timestamps) received from raspberry
 
-    public RfcommSendService() {
-        super("RaspberryToServerService");
+    public RaspberryPi() {
+
     }
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        // A foreground service in order to work in Android has to show a notification, as quoted by
-        // the official guide: "Foreground services must display a Notification."
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) // check if Android version is 8 or higher
-            startMyOwnForeground(); // put the service in a foreground state - for Android 8+
-        else
-            startForeground(1, new Notification()); // put the service in a foreground state - for Android 7 or below
-    }
-
-    @Override
-    protected void onHandleIntent(Intent intent) {
+    public boolean connectAndRead(String remoteDeviceMacAddress) {
+        boolean result = false;
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter != null) {
-            String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
-            Log.d(TAG, "Mac address from intent: " + remoteDeviceMacAddress);
-            boolean result = connectAndReadFromRaspberry(remoteDeviceMacAddress);
-            if (result) {
-                //connectAndSendToServer();
-                String sb = new String(messagesRead);
-                Log.d(TAG, "onHandleIntent(...) data:" + sb);
-            }
+            Log.d(TAG, "Mac address from service: " + remoteDeviceMacAddress);
+            result = connectAndReadFromRaspberry(remoteDeviceMacAddress);
         }
+
+        return result;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private void startMyOwnForeground(){
-        String NOTIFICATION_CHANNEL_ID = "it.polito.helpenvironmentnow";
-        String channelName = "Background HelpEnvironmentNow Service";
-        NotificationChannel chan = new NotificationChannel(NOTIFICATION_CHANNEL_ID, channelName, NotificationManager.IMPORTANCE_NONE);
-        chan.setLightColor(Color.BLUE);
-        chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
-        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        assert manager != null;
-        manager.createNotificationChannel(chan);
+    public byte[] getMessagesRead() {
+        return messagesRead;
+    }
 
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID);
-        Notification notification = notificationBuilder.setOngoing(true)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentTitle("HelpEnvironmentNow is running in background")
-                .setPriority(NotificationManager.IMPORTANCE_MIN)
-                .setCategory(Notification.CATEGORY_SERVICE)
-                .build();
-        startForeground(1, notification);
+    public int getNumberOfMessages() {
+        return numberOfMessages;
+    }
+
+    public int getMessageSize() {
+        return messageSize;
     }
 
     // This method reads the number of messages that follows and their size and sets the private
@@ -181,6 +147,4 @@ public class RfcommSendService extends IntentService {
         }
         return read;
     }
-
-    private void connectAndSendToServer() {}
 }
