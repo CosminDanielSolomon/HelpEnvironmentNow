@@ -4,27 +4,20 @@ import android.app.IntentService;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Build;
-import android.os.SystemClock;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
+import it.polito.helpenvironmentnow.Helper.JsonBuilder;
+import it.polito.helpenvironmentnow.Helper.TempHumMetaData;
 
 public class MainService extends IntentService {
 
     private String TAG = "AppHelpNow";
-    private int numberOfMessages, messageSize; // these fields will be set inside "readMetaDataMessages" after receiving them from raspberry
-    private byte[] messagesRead; // contains the sensor data(with timestamps) received from raspberry
 
     public MainService() {
         super("RaspberryToServerService");
@@ -68,14 +61,15 @@ public class MainService extends IntentService {
         RaspberryPi raspberryPi = new RaspberryPi();
         boolean result = raspberryPi.connectAndRead(remoteDeviceMacAddress);
         if(result) {
-            numberOfMessages = raspberryPi.getNumberOfMessages();
-            messageSize = raspberryPi.getMessageSize();
-            messagesRead = raspberryPi.getMessagesRead();
-            Log.d(TAG, "SUCCESS:" + numberOfMessages + " " + messageSize);
-            String s = new String(messagesRead);
+            TempHumMetaData tempHumMetaData = raspberryPi.getTempHumMetaData();
+            byte[] variableSensorsData = raspberryPi.getVariableSensorsData();
+            Log.d(TAG, "SUCCESS:" + tempHumMetaData.getNumberOfMessages() + " " + tempHumMetaData.getMessageLength());
+            String s = new String(variableSensorsData);
             Log.d(TAG, s);
+            JsonBuilder b = new JsonBuilder();
+            b.parseAndBuildJson(tempHumMetaData, new byte[10], variableSensorsData);
+            Log.d(TAG, "All executed!");
         }
     }
 
-    private void connectAndSendToServer() {}
 }
