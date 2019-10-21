@@ -110,7 +110,7 @@ public class RaspberryPi {
 
     // This method receives all the messages from raspberry and save them into "variableSensorsData" array
     private void readMessages(InputStream socketInputStream) throws IOException {
-        final int SINGLE_READ_SIZE = 1024; // bytes to read with a single call to "read()" - the same size on raspberry side(SINGLE_WRITE_SIZE)
+        final int SINGLE_READ_SIZE = 2048; // bytes to read with a single call to "read()"
         int totalDataSize = tempHumMetaData.getNumberOfMessages() * tempHumMetaData.getMessageLength();
         variableSensorsData = new byte[totalDataSize];
 

@@ -12,6 +12,8 @@ import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
+import org.json.JSONObject;
+
 import it.polito.helpenvironmentnow.Helper.JsonBuilder;
 import it.polito.helpenvironmentnow.Helper.TempHumMetaData;
 
@@ -64,13 +66,8 @@ public class MainService extends IntentService {
             TempHumMetaData tempHumMetaData = raspberryPi.getTempHumMetaData();
             byte[] fixedSensorsData = raspberryPi.getFixedSensorsData();
             byte[] variableSensorsData = raspberryPi.getVariableSensorsData();
-            Log.d(TAG, "SUCCESS:" + tempHumMetaData.getNumberOfMessages() + " " + tempHumMetaData.getMessageLength());
-            String s = new String(variableSensorsData);
-            Log.d(TAG, s);
-            String ss = new String(fixedSensorsData);
-            Log.d(TAG, ss);
             JsonBuilder b = new JsonBuilder();
-            b.parseAndBuildJson(tempHumMetaData, fixedSensorsData, variableSensorsData);
+            JSONObject dataBlock = b.parseAndBuildJson(tempHumMetaData, fixedSensorsData, variableSensorsData);
             Log.d(TAG, "All executed!");
         }
     }
