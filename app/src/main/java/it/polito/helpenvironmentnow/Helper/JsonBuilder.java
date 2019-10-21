@@ -19,8 +19,8 @@ public class JsonBuilder {
         int sensorIdLength = tempHumMetaData.getSensorIdLength();
         JSONObject dataBlock = new JSONObject();
         try {
-            // TODO put geohash dataBlock.put("geoHash",1);
-            // TODO put altitude dataBlock.put("altitude",1);
+            dataBlock.put("geoHash","abcdefghiljk");// TODO put real geohash
+            dataBlock.put("altitude",239.5); // TODO put real altitude
             parseSensorIdTemperature(fixedSensorsData, sensorIdLength);
             parseSensorIdHumidity(fixedSensorsData, sensorIdLength);
             dataBlock.put("sensorIdTemperature", sensorIdTemperature);
