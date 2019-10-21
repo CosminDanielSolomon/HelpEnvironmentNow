@@ -18,7 +18,6 @@ public class RaspberryPi {
     private String TAG = "AppHelpNow";
     private static final int MAX_CONNNECTION_ATTEMPTS = 10; // the max number to retry establish bluetooth connection if fails
     private static final int BLUETOOTH_MSECONDS_SLEEP = 3000; // milliseconds to sleep after connection fails
-    private static final int SINGLE_READ_SIZE = 1024; // bytes to read with a single call to "read()" - the same size on server side(SINGLE_WRITE_SIZE)
 
     private static final int NUMBER_OF_MESSAGES_CHARS = 8; // the number of chars used to represent the length(in bytes) of number of messages
     private static final int MESSAGE_LENGTH_CHARS = 4; // the number of chars used to represent the length(in bytes) of a message
@@ -49,25 +48,33 @@ public class RaspberryPi {
         return result;
     }
 
-    public byte[] getVariableSensorsData() {
-        return variableSensorsData;
-    }
-
     public TempHumMetaData getTempHumMetaData() {
         return tempHumMetaData;
     }
 
-    // This method reads the number of messages that follows and their size and sets the private
-    // variables numberOfMessages and messageSize
-    private void readTempHumMetaData(InputStream socketInputStream) throws IOException {
-        byte[] buffer = new byte[META_DATA_CHARS];
+    public byte[] getFixedSensorsData() {
+        return fixedSensorsData;
+    }
+    public byte[] getVariableSensorsData() {
+        return variableSensorsData;
+    }
+
+    private void readSocketData(InputStream socketInputStream, byte[] buffer, int size) throws IOException {
         int resultRead, bytesRead = 0;
 
         do {
-            resultRead = socketInputStream.read(buffer, bytesRead, META_DATA_CHARS - bytesRead);
+            resultRead = socketInputStream.read(buffer, bytesRead, size - bytesRead);
             if(resultRead != -1)
                 bytesRead += resultRead;
-        } while(bytesRead < META_DATA_CHARS && bytesRead != -1);
+        } while(bytesRead < size && resultRead != -1);
+    }
+
+    // This method reads the number of messages that follows and their size and sets the private
+    // fields of the object TempHumMetaData
+    private void readTempHumMetaData(InputStream socketInputStream) throws IOException {
+        byte[] buffer = new byte[META_DATA_CHARS];
+
+        readSocketData(socketInputStream, buffer, META_DATA_CHARS);
         String strMetaData = new String(buffer, StandardCharsets.UTF_8);
         parseMetaData(strMetaData);
     }
@@ -93,9 +100,17 @@ public class RaspberryPi {
         tempHumMetaData.setHumidityLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
     }
 
+    private void readFixedSensorsData(InputStream socketInputStream) throws IOException {
+        final int sensorIds = 2; // one sensorId for temperature and one for humidity
+        int totalDataSize = tempHumMetaData.getSensorIdLength() * sensorIds;
+        fixedSensorsData = new byte[totalDataSize];
+
+        readSocketData(socketInputStream, fixedSensorsData, totalDataSize);
+    }
+
     // This method receives all the messages from raspberry and save them into "variableSensorsData" array
     private void readMessages(InputStream socketInputStream) throws IOException {
-        readTempHumMetaData(socketInputStream);
+        final int SINGLE_READ_SIZE = 1024; // bytes to read with a single call to "read()" - the same size on raspberry side(SINGLE_WRITE_SIZE)
         int totalDataSize = tempHumMetaData.getNumberOfMessages() * tempHumMetaData.getMessageLength();
         variableSensorsData = new byte[totalDataSize];
 
@@ -157,6 +172,8 @@ public class RaspberryPi {
                 Log.d(TAG, "Socket connected!");
                 try {
                     InputStream socketInputStream = socket.getInputStream();
+                    readTempHumMetaData(socketInputStream);
+                    readFixedSensorsData(socketInputStream);
                     readMessages(socketInputStream);
                     read = true;
                 } catch (IOException e) {

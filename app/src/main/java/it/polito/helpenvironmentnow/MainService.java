@@ -62,12 +62,15 @@ public class MainService extends IntentService {
         boolean result = raspberryPi.connectAndRead(remoteDeviceMacAddress);
         if(result) {
             TempHumMetaData tempHumMetaData = raspberryPi.getTempHumMetaData();
+            byte[] fixedSensorsData = raspberryPi.getFixedSensorsData();
             byte[] variableSensorsData = raspberryPi.getVariableSensorsData();
             Log.d(TAG, "SUCCESS:" + tempHumMetaData.getNumberOfMessages() + " " + tempHumMetaData.getMessageLength());
             String s = new String(variableSensorsData);
             Log.d(TAG, s);
+            String ss = new String(fixedSensorsData);
+            Log.d(TAG, ss);
             JsonBuilder b = new JsonBuilder();
-            b.parseAndBuildJson(tempHumMetaData, new byte[10], variableSensorsData);
+            b.parseAndBuildJson(tempHumMetaData, fixedSensorsData, variableSensorsData);
             Log.d(TAG, "All executed!");
         }
     }
