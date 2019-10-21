@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Build;
+import android.os.SystemClock;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
@@ -68,6 +69,8 @@ public class MainService extends IntentService {
             byte[] variableSensorsData = raspberryPi.getVariableSensorsData();
             JsonBuilder b = new JsonBuilder();
             JSONObject dataBlock = b.parseAndBuildJson(tempHumMetaData, fixedSensorsData, variableSensorsData);
+            HeRestClient heRestClient = new HeRestClient();
+            heRestClient.sendToServer(this, dataBlock);
             Log.d(TAG, "All executed!");
         }
     }

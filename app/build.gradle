@@ -26,8 +26,10 @@ dependencies {
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
     implementation 'org.altbeacon:android-beacon-library:2.16.2'
+    implementation 'com.loopj.android:android-async-http:1.4.10'
 }
 
 repositories {
     jcenter()
+    mavenCentral()
 }
