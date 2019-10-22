@@ -15,8 +15,8 @@ import it.polito.helpenvironmentnow.Helper.TempHumMetaData;
 
 public class RaspberryPi {
 
-    private String TAG = "AppHelpNow";
-    private static final int MAX_CONNNECTION_ATTEMPTS = 10; // the max number to retry establish bluetooth connection if fails
+    private String TAG = "RaspberryPi";
+    private static final int MAX_CONNNECTION_ATTEMPTS = 15; // the max number to retry establish bluetooth connection if fails
     private static final int BLUETOOTH_MSECONDS_SLEEP = 3000; // milliseconds to sleep after connection fails
 
     private static final int NUMBER_OF_MESSAGES_CHARS = 8; // the number of chars used to represent the length(in bytes) of number of messages
@@ -37,11 +37,12 @@ public class RaspberryPi {
 
     }
 
+    // This method returns TRUE if all the data has been read from the Raspberry Pi
     public boolean connectAndRead(String remoteDeviceMacAddress) {
         boolean result = false;
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter != null) {
-            Log.d(TAG, "Mac address from service: " + remoteDeviceMacAddress);
+            Log.d(TAG, "Mac address from MainService: " + remoteDeviceMacAddress);
             result = connectAndReadFromRaspberry(remoteDeviceMacAddress);
         }
 

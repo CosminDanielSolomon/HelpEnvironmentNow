@@ -20,8 +20,6 @@ import it.polito.helpenvironmentnow.Helper.TempHumMetaData;
 
 public class MainService extends IntentService {
 
-    private String TAG = "AppHelpNow";
-
     public MainService() {
         super("RaspberryToServerService");
     }
@@ -62,16 +60,16 @@ public class MainService extends IntentService {
     protected void onHandleIntent(Intent intent) {
         String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
         RaspberryPi raspberryPi = new RaspberryPi();
-        boolean result = raspberryPi.connectAndRead(remoteDeviceMacAddress);
-        if(result) {
+        boolean readResult = raspberryPi.connectAndRead(remoteDeviceMacAddress);
+        if(readResult) {
             TempHumMetaData tempHumMetaData = raspberryPi.getTempHumMetaData();
             byte[] fixedSensorsData = raspberryPi.getFixedSensorsData();
             byte[] variableSensorsData = raspberryPi.getVariableSensorsData();
-            JsonBuilder b = new JsonBuilder();
-            JSONObject dataBlock = b.parseAndBuildJson(tempHumMetaData, fixedSensorsData, variableSensorsData);
+            JsonBuilder jsonBuilder = new JsonBuilder();
+            JSONObject dataBlock = jsonBuilder.parseAndBuildJson(tempHumMetaData, fixedSensorsData, variableSensorsData);
             HeRestClient heRestClient = new HeRestClient();
             heRestClient.sendToServer(this, dataBlock);
-            Log.d(TAG, "All executed!");
+            Log.d("MainService", "All executed!");
         }
     }
 
