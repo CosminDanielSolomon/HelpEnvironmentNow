@@ -7,6 +7,8 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.SystemClock;
 import android.support.annotation.RequiresApi;
@@ -67,10 +69,20 @@ public class MainService extends IntentService {
             byte[] variableSensorsData = raspberryPi.getVariableSensorsData();
             JsonBuilder jsonBuilder = new JsonBuilder();
             JSONObject dataBlock = jsonBuilder.parseAndBuildJson(tempHumMetaData, fixedSensorsData, variableSensorsData);
-            HeRestClient heRestClient = new HeRestClient();
-            heRestClient.sendToServer(this, dataBlock);
-            Log.d("MainService", "All executed!");
+            if(isNetworkAvailable()) {
+                Log.d("MainService", "Network available!");
+                HeRestClient heRestClient = new HeRestClient();
+                heRestClient.sendToServer(this, dataBlock);
+                Log.d("MainService", "All executed!");
+            }
         }
     }
 
+    private boolean isNetworkAvailable() {
+        ConnectivityManager cm = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        boolean isConnected = activeNetwork != null && activeNetwork.isConnected();
+
+        return isConnected;
+    }
 }
