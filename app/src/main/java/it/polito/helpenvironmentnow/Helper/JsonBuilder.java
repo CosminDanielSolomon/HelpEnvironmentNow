@@ -1,5 +1,9 @@
 package it.polito.helpenvironmentnow.Helper;
 
+import android.location.Location;
+
+import com.fonfon.geohash.GeoHash;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -8,7 +12,7 @@ import java.nio.charset.StandardCharsets;
 
 public class JsonBuilder {
 
-    public JSONObject parseAndBuildJson(TempHumMetaData tempHumMetaData, byte[] fixedSensorsData, byte[] variableSensorsData) {
+    public JSONObject parseAndBuildJson(Location location, TempHumMetaData tempHumMetaData, byte[] fixedSensorsData, byte[] variableSensorsData) {
         int numberOfMessages = tempHumMetaData.getNumberOfMessages();
         int messageLength = tempHumMetaData.getMessageLength();
         int timestampLength = tempHumMetaData.getTimestampLength();
@@ -17,8 +21,8 @@ public class JsonBuilder {
         int sensorIdLength = tempHumMetaData.getSensorIdLength();
         JSONObject dataBlock = new JSONObject();
         try {
-            dataBlock.put("geoHash","abcdefghiljk");// TODO put real geohash
-            dataBlock.put("altitude",239.5); // TODO put real altitude
+            dataBlock.put("geoHash", encodeLocation(location));
+            dataBlock.put("altitude", location.getAltitude());
             dataBlock.put("sensorIdTemperature", parseSensorIdTemperature(fixedSensorsData, sensorIdLength));
             dataBlock.put("sensorIdHumidity", parseSensorIdHumidity(fixedSensorsData, sensorIdLength));
             JSONArray messagesArray = new JSONArray();
@@ -30,6 +34,12 @@ public class JsonBuilder {
         }
 
         return dataBlock;
+    }
+
+    private String encodeLocation(Location location) {
+        final int numberOfChars = 12; // the same size as the corresponding database field - varchar(12)
+        GeoHash hash = GeoHash.fromLocation(location, numberOfChars);
+        return hash.toString();
     }
 
     private int parseSensorIdTemperature(byte[] fixedSensorsData, int sensorIdLength) {
@@ -49,8 +59,10 @@ public class JsonBuilder {
         int offset = messageCount * messageLength;
         String strMessage = new String(variableSensorsData, offset, messageLength, StandardCharsets.UTF_8);
         int timestamp = Integer.parseInt(strMessage.substring(0, timestampLength));
-        float temperature = Float.parseFloat(strMessage.substring(timestampLength, timestampLength + temperatureLength));
-        float humidity = Float.parseFloat(strMessage.substring(timestampLength + temperatureLength, timestampLength + temperatureLength + humidityLength));
+        float temperature = Float.parseFloat(strMessage.substring(timestampLength,
+                timestampLength + temperatureLength));
+        float humidity = Float.parseFloat(strMessage.substring(timestampLength + temperatureLength,
+                timestampLength + temperatureLength + humidityLength));
         JSONObject tempHumRead = new JSONObject();
         tempHumRead.put("timestamp", timestamp);
         tempHumRead.put("temperature", temperature);

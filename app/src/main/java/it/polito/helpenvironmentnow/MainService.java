@@ -7,20 +7,28 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.location.Location;
+import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.SystemClock;
-import android.support.annotation.RequiresApi;
-import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+
+import androidx.annotation.RequiresApi;
+import androidx.core.app.NotificationCompat;
 
 import org.json.JSONObject;
 
 import it.polito.helpenvironmentnow.Helper.JsonBuilder;
-import it.polito.helpenvironmentnow.Helper.TempHumMetaData;
+import it.polito.helpenvironmentnow.Helper.LocationInfo;
+import it.polito.helpenvironmentnow.Helper.MyLocationListener;
 
-public class MainService extends IntentService {
+public class MainService extends IntentService implements MyLocationListener {
+
+    private final int WAIT_LOCATION_SLEEP_MSEC = 1000;
+    private Location curLocation;
+    private boolean curLocationReady = false;
 
     public MainService() {
         super("RaspberryToServerService");
@@ -60,21 +68,30 @@ public class MainService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
+        /* the remote device is the the Raspberry Pi */
         String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
         RaspberryPi raspberryPi = new RaspberryPi();
         boolean readResult = raspberryPi.connectAndRead(remoteDeviceMacAddress);
         if(readResult) {
-            TempHumMetaData tempHumMetaData = raspberryPi.getTempHumMetaData();
-            byte[] fixedSensorsData = raspberryPi.getFixedSensorsData();
-            byte[] variableSensorsData = raspberryPi.getVariableSensorsData();
+            /* readResult=true -> Data has been read correctly from Raspberry Pi */
+            LocationInfo.getCurrentLocation(this, this);
+            /* Wait until the device current location is returned. When location is ready, locationCompleted(...)
+            * is called and sets curLocationReady to true and so the while cycle will be interrupted
+            * and the field curLocation will contain latitude, longitude, altitude */
+            while(!curLocationReady) {
+                Log.d("MainService", "Inside wait while...");
+                SystemClock.sleep(WAIT_LOCATION_SLEEP_MSEC);
+            }
             JsonBuilder jsonBuilder = new JsonBuilder();
-            JSONObject dataBlock = jsonBuilder.parseAndBuildJson(tempHumMetaData, fixedSensorsData, variableSensorsData);
+            JSONObject dataBlock = jsonBuilder.parseAndBuildJson(curLocation, raspberryPi.getTempHumMetaData(),
+                    raspberryPi.getFixedSensorsData(), raspberryPi.getVariableSensorsData());
             if(isNetworkAvailable()) {
                 Log.d("MainService", "Network available!");
                 HeRestClient heRestClient = new HeRestClient();
                 heRestClient.sendToServer(this, dataBlock);
                 Log.d("MainService", "All executed!");
             }
+            // TODO controllare quando la rete diventa disponibile e inviare allora...
         }
     }
 
@@ -84,5 +101,21 @@ public class MainService extends IntentService {
         boolean isConnected = activeNetwork != null && activeNetwork.isConnected();
 
         return isConnected;
+    }
+
+    private void check() {
+        Location location = new Location(LocationManager.GPS_PROVIDER);
+
+        /* Check if the requested Location has its altitude set */
+        if(location.hasAltitude()) {
+            Log.d("ALT", "ALT" + location.getAltitude());
+        }
+    }
+
+    @Override
+    public void locationCompleted(Location location) {
+        curLocation = location;
+        curLocationReady = true;
+        Log.d("MainService", "lat" + location.getLatitude()+"long"+location.getLongitude()+"alt"+location.getAltitude());
     }
 }

@@ -3,7 +3,7 @@ package it.polito.helpenvironmentnow;
 import android.app.Application;
 import android.content.Intent;
 import android.os.RemoteException;
-import android.support.v4.content.ContextCompat;
+import androidx.core.content.ContextCompat;
 import android.util.Log;
 
 import org.altbeacon.beacon.Beacon;
