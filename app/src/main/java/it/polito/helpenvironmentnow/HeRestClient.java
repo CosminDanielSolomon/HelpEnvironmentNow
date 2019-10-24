@@ -16,7 +16,7 @@ import cz.msebera.android.httpclient.entity.StringEntity;
 
 public class HeRestClient {
     private final String TAG = "AppHelpNow";
-    private final String HE_WEB_SERVICE_URL = "http://172.22.17.137:8080/HelpEnvironment/helpenvironment/he/newdata";
+    private final String HE_WEB_SERVICE_URL = "http://10.1.23.126:8080/HelpEnvironment/helpenvironment/he/newdata";
 
     public void sendToServer(Context context, JSONObject dataBlock) {
         StringEntity entity = new StringEntity(dataBlock.toString(), StandardCharsets.UTF_8);

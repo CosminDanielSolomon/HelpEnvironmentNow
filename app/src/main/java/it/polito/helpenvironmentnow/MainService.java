@@ -8,8 +8,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.location.Location;
-import android.location.LocationManager;
 import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.SystemClock;
@@ -17,12 +18,17 @@ import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
+import androidx.work.Constraints;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
 
 import org.json.JSONObject;
 
 import it.polito.helpenvironmentnow.Helper.JsonBuilder;
 import it.polito.helpenvironmentnow.Helper.LocationInfo;
 import it.polito.helpenvironmentnow.Helper.MyLocationListener;
+import it.polito.helpenvironmentnow.Helper.UploadWorker;
 
 public class MainService extends IntentService implements MyLocationListener {
 
@@ -89,27 +95,32 @@ public class MainService extends IntentService implements MyLocationListener {
                 Log.d("MainService", "Network available!");
                 HeRestClient heRestClient = new HeRestClient();
                 heRestClient.sendToServer(this, dataBlock);
-                Log.d("MainService", "All executed!");
+            } else {
+                Log.d("MainService", "Network NOT available!");
+                // Create a Constraints object that defines when the task should run
+                Constraints constraints = new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build();
+                OneTimeWorkRequest uploadWorkRequest = new OneTimeWorkRequest.Builder(UploadWorker.class)
+                        .setConstraints(constraints).build();
+                WorkManager.getInstance(this).enqueue(uploadWorkRequest);
             }
-            // TODO controllare quando la rete diventa disponibile e inviare allora...
+            Log.d("MainService", "All executed!");
         }
     }
 
     private boolean isNetworkAvailable() {
         ConnectivityManager cm = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-        boolean isConnected = activeNetwork != null && activeNetwork.isConnected();
+        boolean isConnected;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Network activeNetwork = cm.getActiveNetwork();
+            NetworkCapabilities networkCapabilities = cm.getNetworkCapabilities(activeNetwork);
+            isConnected = networkCapabilities != null && networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+        } else {
+            NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+            isConnected = activeNetwork != null && activeNetwork.isConnected();
+        }
 
         return isConnected;
-    }
-
-    private void check() {
-        Location location = new Location(LocationManager.GPS_PROVIDER);
-
-        /* Check if the requested Location has its altitude set */
-        if(location.hasAltitude()) {
-            Log.d("ALT", "ALT" + location.getAltitude());
-        }
     }
 
     @Override

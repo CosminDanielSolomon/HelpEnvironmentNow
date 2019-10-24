@@ -29,6 +29,7 @@ dependencies {
     implementation 'com.loopj.android:android-async-http:1.4.10'
     implementation 'com.google.android.gms:play-services-location:17.0.0'
     implementation 'com.github.drfonfon:android-geohash:0.22'
+    implementation "androidx.work:work-runtime:2.2.0"
 }
 
 repositories {
