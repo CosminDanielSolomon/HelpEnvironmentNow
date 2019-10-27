@@ -18,13 +18,17 @@ import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
+import androidx.room.Room;
 import androidx.work.Constraints;
+import androidx.work.ExistingWorkPolicy;
 import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 
 import org.json.JSONObject;
 
+import it.polito.helpenvironmentnow.Caching.CachedJson;
+import it.polito.helpenvironmentnow.Caching.LocalDatabase;
 import it.polito.helpenvironmentnow.Helper.JsonBuilder;
 import it.polito.helpenvironmentnow.Helper.LocationInfo;
 import it.polito.helpenvironmentnow.Helper.MyLocationListener;
@@ -91,18 +95,19 @@ public class MainService extends IntentService implements MyLocationListener {
             JsonBuilder jsonBuilder = new JsonBuilder();
             JSONObject dataBlock = jsonBuilder.parseAndBuildJson(curLocation, raspberryPi.getTempHumMetaData(),
                     raspberryPi.getFixedSensorsData(), raspberryPi.getVariableSensorsData());
-            if(isNetworkAvailable()) {
+            /*if(isNetworkAvailable()) {
                 Log.d("MainService", "Network available!");
                 HeRestClient heRestClient = new HeRestClient();
                 heRestClient.sendToServer(this, dataBlock);
-            } else {
+            } else {*/
                 Log.d("MainService", "Network NOT available!");
+                final String WORK_TAG = "uploadSensorsData";
                 // Create a Constraints object that defines when the task should run
                 Constraints constraints = new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build();
                 OneTimeWorkRequest uploadWorkRequest = new OneTimeWorkRequest.Builder(UploadWorker.class)
                         .setConstraints(constraints).build();
-                WorkManager.getInstance(this).enqueue(uploadWorkRequest);
-            }
+                WorkManager.getInstance(this).enqueueUniqueWork(WORK_TAG, ExistingWorkPolicy.REPLACE, uploadWorkRequest);
+            //}
             Log.d("MainService", "All executed!");
         }
     }
@@ -128,5 +133,17 @@ public class MainService extends IntentService implements MyLocationListener {
         curLocation = location;
         curLocationReady = true;
         Log.d("MainService", "lat" + location.getLatitude()+"long"+location.getLongitude()+"alt"+location.getAltitude());
+    }
+
+    private void cacheInDatabase(JSONObject jsonObject) {
+        final String dbName = "dbJsonCaching";
+        LocalDatabase db = Room.databaseBuilder(getApplicationContext(), LocalDatabase.class, dbName).build();
+        CachedJson currentJson = new CachedJson();
+        currentJson.id = 0;
+        currentJson.jsonSave = jsonObject.toString();
+        db.cachedJsonDao().insertJson(currentJson);
+        for(CachedJson cj : db.cachedJsonDao().getAllCachedJson()) {
+            Log.d("MainService","id" + cj.id + " json " + cj.jsonSave);
+        }
     }
 }

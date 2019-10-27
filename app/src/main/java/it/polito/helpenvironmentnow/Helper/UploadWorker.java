@@ -17,8 +17,11 @@ public class UploadWorker extends Worker {
     @NonNull
     @Override
     public Result doWork() {
-        Log.d("UploadWorker", "doWork() called");
-        SystemClock.sleep(5000);
+        Log.d("SensorUpload", "doWork() called");
+        for(int i=0;i<25;i++) {
+            SystemClock.sleep(1000);
+            Log.d("SensorUpload", "sleep() "+ (i+1) + " executed");
+        }
         return Result.success();
     }
 }
