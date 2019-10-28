@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
+import it.polito.helpenvironmentnow.HeRestClient;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 import it.polito.helpenvironmentnow.Storage.StoredJson;
 
@@ -20,14 +21,15 @@ public class UploadWorker extends Worker {
     @Override
     public Result doWork() {
         Log.d("SensorUpload", "doWork() called");
-        /*for(int i=0;i<25;i++) {
-            SystemClock.sleep(1000);
-            Log.d("SensorUpload", "sleep() "+ (i+1) + " executed");
-        }*/
-        MyDb myDb = new MyDb(getApplicationContext());
+        boolean sendResult;
+        Context context = getApplicationContext();
+        MyDb myDb = new MyDb(context);
+        HeRestClient heRestClient = new HeRestClient();
         for(StoredJson storedJson : myDb.getAllStoredJson()) {
             Log.d("SensorUpload","id" + storedJson.id);
-
+            sendResult = heRestClient.sendToServerWithResult(context, storedJson.jsonSave);
+            if(!sendResult)
+                return Result.retry();
             myDb.deleteJsonObject(storedJson);
         }
         return Result.success();
