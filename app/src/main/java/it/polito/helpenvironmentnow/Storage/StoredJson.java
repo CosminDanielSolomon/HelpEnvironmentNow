@@ -1,10 +1,10 @@
-package it.polito.helpenvironmentnow.Caching;
+package it.polito.helpenvironmentnow.Storage;
 
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
 @Entity
-public class CachedJson {
+public class StoredJson {
     @PrimaryKey(autoGenerate = true)
     public int id;
     public String jsonSave;

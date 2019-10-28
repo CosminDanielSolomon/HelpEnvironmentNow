@@ -8,28 +8,31 @@ import com.loopj.android.http.SyncHttpClient;
 
 import org.json.JSONObject;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 
 import cz.msebera.android.httpclient.Header;
 import cz.msebera.android.httpclient.entity.StringEntity;
+import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
+import it.polito.helpenvironmentnow.Storage.MyDb;
 
 public class HeRestClient {
-    private final String TAG = "AppHelpNow";
-    private final String HE_WEB_SERVICE_URL = "http://10.1.23.126:8080/HelpEnvironment/helpenvironment/he/newdata";
+    private final static String HE_WEB_SERVICE_URL = "http://10.1.23.126:8080/HelpEnvironment/helpenvironment/he/newdata";
+    private static SyncHttpClient restClient = new SyncHttpClient();
 
-    public void sendToServer(Context context, JSONObject dataBlock) {
+    public static void sendToServer(final Context context, final JSONObject dataBlock) {
         StringEntity entity = new StringEntity(dataBlock.toString(), StandardCharsets.UTF_8);
-        SyncHttpClient restClient = new SyncHttpClient();
         restClient.put(context, HE_WEB_SERVICE_URL, entity, "application/json", new AsyncHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
-                Log.d(TAG, "PUT SUCCESS:"+statusCode);
+                Log.d("Client", "PUT SUCCESS:"+statusCode);
             }
 
             @Override
             public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
-                Log.d(TAG, "PUT FAIL:"+statusCode);
+                Log.d("Client", "PUT FAIL:"+statusCode);
+                MyDb myDb = new MyDb(context);
+                myDb.storeJsonObject(dataBlock);
+                MyWorkerManager.enqueueNetworkWorker(context);
             }
 
             @Override
@@ -37,5 +40,9 @@ public class HeRestClient {
                 super.onRetry(retryNo);
             }
         });
+    }
+
+    public static boolean sendToServerWithOutcome(final Context context, final JSONObject dataBlock) {
+        return true;
     }
 }

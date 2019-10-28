@@ -8,17 +8,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.location.Location;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
-import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
-import androidx.room.Room;
 import androidx.work.Constraints;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.NetworkType;
@@ -27,16 +22,16 @@ import androidx.work.WorkManager;
 
 import org.json.JSONObject;
 
-import it.polito.helpenvironmentnow.Caching.CachedJson;
-import it.polito.helpenvironmentnow.Caching.LocalDatabase;
+import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
+import it.polito.helpenvironmentnow.Storage.MyDb;
 import it.polito.helpenvironmentnow.Helper.JsonBuilder;
 import it.polito.helpenvironmentnow.Helper.LocationInfo;
 import it.polito.helpenvironmentnow.Helper.MyLocationListener;
-import it.polito.helpenvironmentnow.Helper.UploadWorker;
+import it.polito.helpenvironmentnow.Helper.NetworkInfo;
+import it.polito.helpenvironmentnow.MyWorker.UploadWorker;
 
 public class MainService extends IntentService implements MyLocationListener {
 
-    private final int WAIT_LOCATION_SLEEP_MSEC = 1000;
     private Location curLocation;
     private boolean curLocationReady = false;
 
@@ -83,49 +78,34 @@ public class MainService extends IntentService implements MyLocationListener {
         RaspberryPi raspberryPi = new RaspberryPi();
         boolean readResult = raspberryPi.connectAndRead(remoteDeviceMacAddress);
         if(readResult) {
-            /* readResult=true -> Data has been read correctly from Raspberry Pi */
-            LocationInfo.getCurrentLocation(this, this);
+            /* readResult = true -> Data has been read correctly from Raspberry Pi */
+            LocationInfo.getCurrentLocation(getApplicationContext(), this);
             /* Wait until the device current location is returned. When location is ready, locationCompleted(...)
             * is called and sets curLocationReady to true and so the while cycle will be interrupted
             * and the field curLocation will contain latitude, longitude, altitude */
             while(!curLocationReady) {
                 Log.d("MainService", "Inside wait while...");
-                SystemClock.sleep(WAIT_LOCATION_SLEEP_MSEC);
+                int WAIT_LOCATION_MS = 1000;
+                SystemClock.sleep(WAIT_LOCATION_MS);
             }
+            /* Build the json object filling it with data from Raspberry Pi and location data */
             JsonBuilder jsonBuilder = new JsonBuilder();
             JSONObject dataBlock = jsonBuilder.parseAndBuildJson(curLocation, raspberryPi.getTempHumMetaData(),
                     raspberryPi.getFixedSensorsData(), raspberryPi.getVariableSensorsData());
-            /*if(isNetworkAvailable()) {
+            if(NetworkInfo.isNetworkAvailable(this)) {
+                /* Send json object to the server */
                 Log.d("MainService", "Network available!");
-                HeRestClient heRestClient = new HeRestClient();
-                heRestClient.sendToServer(this, dataBlock);
-            } else {*/
+                HeRestClient.sendToServer(getApplicationContext(), dataBlock);
+            } else {
+                /* Network is not available, I store it in local database and I enqueue a work that
+                 * the Worker Manager will execute when network became available */
                 Log.d("MainService", "Network NOT available!");
-                final String WORK_TAG = "uploadSensorsData";
-                // Create a Constraints object that defines when the task should run
-                Constraints constraints = new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build();
-                OneTimeWorkRequest uploadWorkRequest = new OneTimeWorkRequest.Builder(UploadWorker.class)
-                        .setConstraints(constraints).build();
-                WorkManager.getInstance(this).enqueueUniqueWork(WORK_TAG, ExistingWorkPolicy.REPLACE, uploadWorkRequest);
-            //}
+                MyDb myDb = new MyDb(getApplicationContext());
+                myDb.storeJsonObject(dataBlock);
+                MyWorkerManager.enqueueNetworkWorker(getApplicationContext());
+            }
             Log.d("MainService", "All executed!");
         }
-    }
-
-    private boolean isNetworkAvailable() {
-        ConnectivityManager cm = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
-        boolean isConnected;
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Network activeNetwork = cm.getActiveNetwork();
-            NetworkCapabilities networkCapabilities = cm.getNetworkCapabilities(activeNetwork);
-            isConnected = networkCapabilities != null && networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
-        } else {
-            NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-            isConnected = activeNetwork != null && activeNetwork.isConnected();
-        }
-
-        return isConnected;
     }
 
     @Override
@@ -133,17 +113,5 @@ public class MainService extends IntentService implements MyLocationListener {
         curLocation = location;
         curLocationReady = true;
         Log.d("MainService", "lat" + location.getLatitude()+"long"+location.getLongitude()+"alt"+location.getAltitude());
-    }
-
-    private void cacheInDatabase(JSONObject jsonObject) {
-        final String dbName = "dbJsonCaching";
-        LocalDatabase db = Room.databaseBuilder(getApplicationContext(), LocalDatabase.class, dbName).build();
-        CachedJson currentJson = new CachedJson();
-        currentJson.id = 0;
-        currentJson.jsonSave = jsonObject.toString();
-        db.cachedJsonDao().insertJson(currentJson);
-        for(CachedJson cj : db.cachedJsonDao().getAllCachedJson()) {
-            Log.d("MainService","id" + cj.id + " json " + cj.jsonSave);
-        }
     }
 }
