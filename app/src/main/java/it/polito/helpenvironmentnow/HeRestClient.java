@@ -1,7 +1,6 @@
 package it.polito.helpenvironmentnow;
 
 import android.content.Context;
-import android.os.Looper;
 import android.util.Log;
 
 import com.loopj.android.http.AsyncHttpResponseHandler;
@@ -31,21 +30,16 @@ public class HeRestClient {
         restClient.put(context, HE_WEB_SERVICE_URL, entity, "application/json", new AsyncHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
-                Log.d("Client", "PUT SUCCESS:"+statusCode);
+                Log.d("Client", "Service PUT SUCCESS:"+statusCode);
             }
 
             @Override
             public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
-                Log.d("Client", "PUT FAIL:"+statusCode);
+                Log.d("Client", "Service PUT FAIL:"+statusCode);
                 MyDb myDb = new MyDb(context);
                 myDb.storeJsonObject(dataBlock);
                 myDb.closeDb();
                 MyWorkerManager.enqueueNetworkWorker(context);
-            }
-
-            @Override
-            public void onRetry(int retryNo) {
-                super.onRetry(retryNo);
             }
         });
     }
@@ -63,11 +57,6 @@ public class HeRestClient {
             public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
                 Log.d("Client", "Worker PUT FAIL:"+statusCode);
                 sendResult = false;
-            }
-
-            @Override
-            public void onRetry(int retryNo) {
-                super.onRetry(retryNo);
             }
         };
         restClient.put(context, HE_WEB_SERVICE_URL, entity, "application/json", responseHandler);

@@ -50,7 +50,6 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
 
     @Override
     public void didDetermineStateForRegion(int state, Region arg1) {
-        Log.d(TAG, "didDetermineStateForRegion(...) called");
         try {
             beaconManager.startRangingBeaconsInRegion(region);
             beaconManager.addRangeNotifier(this);
@@ -73,12 +72,12 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
         // if you want the Activity to launch every single time beacons come into view, remove this call.
         //regionBootstrap.disable();
 
-        Intent intent = new Intent(this, MainActivity.class);
+        //Intent intent = new Intent(this, MainActivity.class);
         // IMPORTANT: in the AndroidManifest.xml definition of this activity, you must set android:launchMode="singleInstance" or you will get two instances
         // created when a user launches the activity manually and it gets launched from here.
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        Log.d(TAG, "didEnterRegion Launching activity");
-        this.startActivity(intent);
+        //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        //Log.d(TAG, "didEnterRegion Launching activity");
+        //this.startActivity(intent);
     }
 
     @Override
@@ -88,9 +87,7 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
 
     @Override
     public void didRangeBeaconsInRegion(Collection<Beacon> beacons, Region region) {
-        Log.d(TAG, "didRangeBeaconsInRegion(...) called");
         if(beacons.size() > 0) {
-            Log.d(TAG, "didRangeBeaconsInRegion(...) enter in for loop size >0");
             for (Beacon beacon : beacons) {
                 if (beacon.getServiceUuid() == 0xfeaa && beacon.getBeaconTypeCode() == 0x00) {
                     // This is a Eddystone-UID frame
@@ -103,7 +100,6 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
                             Log.d(TAG, "remoteMacAddress:" + remoteMacAddress + " " + detectedNamespaceId.toString() + detectedInstanceId.toString());
                             intent.putExtra("remoteMacAddress", remoteMacAddress);
                             ContextCompat.startForegroundService(this, intent);
-                            Log.d(TAG, "startService(...) performed");
                             break;
                         }
                     }

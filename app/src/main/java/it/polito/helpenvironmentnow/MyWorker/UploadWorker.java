@@ -2,7 +2,6 @@ package it.polito.helpenvironmentnow.MyWorker;
 
 import android.content.Context;
 import android.os.Looper;
-import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -35,7 +34,7 @@ public class UploadWorker extends Worker {
         MyDb myDb = new MyDb(context);
         HeRestClient heRestClient = new HeRestClient();
         for(StoredJson storedJson : myDb.getAllStoredJson()) {
-            Log.d("SensorUpload","id" + storedJson.id);
+            Log.d("SensorUpload","id " + storedJson.id);
             sendResult = heRestClient.sendToServerWithResult(context, storedJson.jsonSave);
             if(!sendResult) {
                 Objects.requireNonNull(Looper.myLooper()).quit();

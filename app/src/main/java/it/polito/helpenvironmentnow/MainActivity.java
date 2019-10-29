@@ -22,7 +22,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Log.d(TAG, "Main Activity onCreate(...) eseguito");
         /* TODO remove this part */
         Button btnConnect = findViewById(R.id.buttonConnect);
         btnConnect.setOnClickListener(new View.OnClickListener() {
@@ -31,7 +30,7 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(getApplicationContext(), MainService.class);
                 intent.putExtra("remoteMacAddress", "B8:27:EB:C4:15:D6");
                 ContextCompat.startForegroundService(getApplicationContext(), intent);
-                Log.d(TAG, "startService(...) performed");
+                Log.d(TAG, "Activity startService(...) performed");
             }
         });
         /* TODO remove this part */

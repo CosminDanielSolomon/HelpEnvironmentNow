@@ -42,7 +42,6 @@ public class RaspberryPi {
         boolean result = false;
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter != null) {
-            Log.d(TAG, "Mac address from MainService: " + remoteDeviceMacAddress);
             result = connectAndReadFromRaspberry(remoteDeviceMacAddress);
         }
 
@@ -115,7 +114,7 @@ public class RaspberryPi {
         int totalDataSize = tempHumMetaData.getNumberOfMessages() * tempHumMetaData.getMessageLength();
         variableSensorsData = new byte[totalDataSize];
 
-        Log.d(TAG, "readMessages() totalDataSize:"+totalDataSize);
+        Log.d(TAG, "readMessages() totalDataSize:"+totalDataSize+" bytes");
         int currentDataSize = 0, bytesRead = 0;
         int singleReadSize = SINGLE_READ_SIZE;
         while(currentDataSize < totalDataSize && bytesRead != -1) {
@@ -124,7 +123,6 @@ public class RaspberryPi {
             bytesRead = socketInputStream.read(variableSensorsData, currentDataSize, singleReadSize);
             if(bytesRead != -1)
                 currentDataSize += bytesRead;
-            Log.d(TAG, "readMessages():" + bytesRead + " currentDataSize:" + currentDataSize);
         }
     }
 
@@ -170,7 +168,6 @@ public class RaspberryPi {
                 attempt++;
             }
             if(socket.isConnected()) {
-                Log.d(TAG, "Socket connected!");
                 try {
                     InputStream socketInputStream = socket.getInputStream();
                     readTempHumMetaData(socketInputStream);
@@ -182,7 +179,7 @@ public class RaspberryPi {
                     e.printStackTrace();
                 } finally {
                     try {
-                        Log.d(TAG, "Socket connected. I close it.");
+                        Log.d(TAG, "I close connected socket.");
                         socket.close();
                     } catch (IOException e) {
                         e.printStackTrace();
