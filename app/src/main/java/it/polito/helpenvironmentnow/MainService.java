@@ -14,21 +14,15 @@ import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
-import androidx.work.Constraints;
-import androidx.work.ExistingWorkPolicy;
-import androidx.work.NetworkType;
-import androidx.work.OneTimeWorkRequest;
-import androidx.work.WorkManager;
 
 import org.json.JSONObject;
 
-import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
-import it.polito.helpenvironmentnow.Storage.MyDb;
 import it.polito.helpenvironmentnow.Helper.JsonBuilder;
 import it.polito.helpenvironmentnow.Helper.LocationInfo;
 import it.polito.helpenvironmentnow.Helper.MyLocationListener;
 import it.polito.helpenvironmentnow.Helper.NetworkInfo;
-import it.polito.helpenvironmentnow.MyWorker.UploadWorker;
+import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
+import it.polito.helpenvironmentnow.Storage.MyDb;
 
 public class MainService extends IntentService implements MyLocationListener {
 
@@ -103,6 +97,7 @@ public class MainService extends IntentService implements MyLocationListener {
                 Log.d("MainService", "Network NOT available!");
                 MyDb myDb = new MyDb(getApplicationContext());
                 myDb.storeJsonObject(dataBlock);
+                myDb.closeDb();
                 MyWorkerManager.enqueueNetworkWorker(getApplicationContext());
             }
             Log.d("MainService", "All executed!");

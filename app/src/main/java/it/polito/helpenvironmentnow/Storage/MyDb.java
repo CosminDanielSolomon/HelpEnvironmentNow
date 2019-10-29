@@ -8,10 +8,11 @@ import org.json.JSONObject;
 
 public class MyDb {
     private static final String LOCAL_DB_NAME = "DB_JSON_CACHING";
+    private LocalStore db;
     private StoredJsonDao storedJsonDao; // used to access the database
 
     public MyDb(Context context) {
-        LocalStore db = Room.databaseBuilder(context, LocalStore.class, LOCAL_DB_NAME).build();
+        db = Room.databaseBuilder(context, LocalStore.class, LOCAL_DB_NAME).build();
         this.storedJsonDao = db.storedJsonDao();
     }
 
@@ -28,5 +29,9 @@ public class MyDb {
 
     public StoredJson[] getAllStoredJson() {
         return storedJsonDao.getAllStoredJson();
+    }
+
+    public void closeDb() {
+        db.close();
     }
 }

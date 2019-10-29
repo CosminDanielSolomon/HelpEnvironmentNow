@@ -39,6 +39,7 @@ public class HeRestClient {
                 Log.d("Client", "PUT FAIL:"+statusCode);
                 MyDb myDb = new MyDb(context);
                 myDb.storeJsonObject(dataBlock);
+                myDb.closeDb();
                 MyWorkerManager.enqueueNetworkWorker(context);
             }
 
@@ -51,17 +52,16 @@ public class HeRestClient {
 
     public boolean sendToServerWithResult(final Context context, final String dataBlock) {
         StringEntity entity = new StringEntity(dataBlock, StandardCharsets.UTF_8);
-
-        restClient.put(context, HE_WEB_SERVICE_URL, entity, "application/json", new AsyncHttpResponseHandler() {
+        AsyncHttpResponseHandler responseHandler = new AsyncHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
-                Log.d("Client", "PUT SUCCESS:"+statusCode);
+                Log.d("Client", "Worker PUT SUCCESS:"+statusCode);
                 sendResult = true;
             }
 
             @Override
             public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
-                Log.d("Client", "PUT FAIL:"+statusCode);
+                Log.d("Client", "Worker PUT FAIL:"+statusCode);
                 sendResult = false;
             }
 
@@ -69,7 +69,8 @@ public class HeRestClient {
             public void onRetry(int retryNo) {
                 super.onRetry(retryNo);
             }
-        });
+        };
+        restClient.put(context, HE_WEB_SERVICE_URL, entity, "application/json", responseHandler);
 
         return sendResult;
     }
