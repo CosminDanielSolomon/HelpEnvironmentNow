@@ -3,7 +3,11 @@ package it.polito.helpenvironmentnow;
 import android.app.Application;
 import android.content.Intent;
 import android.os.RemoteException;
+
+import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.work.Configuration;
+
 import android.util.Log;
 
 import org.altbeacon.beacon.Beacon;
@@ -16,8 +20,9 @@ import org.altbeacon.beacon.startup.BootstrapNotifier;
 import org.altbeacon.beacon.startup.RegionBootstrap;
 
 import java.util.Collection;
+import java.util.concurrent.Executors;
 
-public class ApplicationHelpEnvironmentNow extends Application implements BootstrapNotifier, RangeNotifier {
+public class ApplicationHelpEnvironmentNow extends Application implements BootstrapNotifier, RangeNotifier, Configuration.Provider {
     private static final String TAG = "AppHelpNow";
     private static final String namespaceId = "0xa8844da2d40a11e9bb65";
     private static final String instanceId = "0x2a2ae2dbcce4";
@@ -105,5 +110,11 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
                 }
             }
         }
+    }
+
+    @NonNull
+    @Override
+    public Configuration getWorkManagerConfiguration() {
+        return new Configuration.Builder().setExecutor(Executors.newSingleThreadExecutor()).build();
     }
 }

@@ -2,11 +2,14 @@ package it.polito.helpenvironmentnow.MyWorker;
 
 import android.content.Context;
 
+import androidx.work.Configuration;
 import androidx.work.Constraints;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
+
+import java.util.concurrent.Executors;
 
 public class MyWorkerManager {
     public static void enqueueNetworkWorker(Context context) {

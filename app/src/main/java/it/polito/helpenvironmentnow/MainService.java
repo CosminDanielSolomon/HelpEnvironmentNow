@@ -95,7 +95,8 @@ public class MainService extends IntentService implements MyLocationListener {
             if(NetworkInfo.isNetworkAvailable(this)) {
                 /* Send json object to the server */
                 Log.d("MainService", "Network available!");
-                HeRestClient.sendToServer(getApplicationContext(), dataBlock);
+                HeRestClient heRestClient = new HeRestClient();
+                heRestClient.sendToServer(getApplicationContext(), dataBlock);
             } else {
                 /* Network is not available, I store it in local database and I enqueue a work that
                  * the Worker Manager will execute when network became available */

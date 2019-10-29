@@ -1,6 +1,7 @@
 package it.polito.helpenvironmentnow;
 
 import android.content.Context;
+import android.os.Looper;
 import android.util.Log;
 
 import com.loopj.android.http.AsyncHttpResponseHandler;
@@ -17,10 +18,15 @@ import it.polito.helpenvironmentnow.Storage.MyDb;
 
 public class HeRestClient {
     private final static String HE_WEB_SERVICE_URL = "http://10.1.23.126:8080/HelpEnvironment/helpenvironment/he/newdata";
-    private static SyncHttpClient restClient = new SyncHttpClient();
+    private SyncHttpClient restClient;
     private boolean sendResult;
 
-    public static void sendToServer(final Context context, final JSONObject dataBlock) {
+    public HeRestClient() {
+        this.restClient = new SyncHttpClient();
+    }
+
+    public void sendToServer(final Context context, final JSONObject dataBlock) {
+
         StringEntity entity = new StringEntity(dataBlock.toString(), StandardCharsets.UTF_8);
         restClient.put(context, HE_WEB_SERVICE_URL, entity, "application/json", new AsyncHttpResponseHandler() {
             @Override
@@ -45,6 +51,7 @@ public class HeRestClient {
 
     public boolean sendToServerWithResult(final Context context, final String dataBlock) {
         StringEntity entity = new StringEntity(dataBlock, StandardCharsets.UTF_8);
+
         restClient.put(context, HE_WEB_SERVICE_URL, entity, "application/json", new AsyncHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {

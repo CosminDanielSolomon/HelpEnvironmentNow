@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="it.polito.helpenvironmentnow">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="it.polito.helpenvironmentnow">
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
@@ -24,6 +26,10 @@
         </activity>
 
         <service android:name=".MainService" />
+        <provider
+            android:name="androidx.work.impl.WorkManagerInitializer"
+            android:authorities="it.polito.helpenvironmentnow.workmanager-init"
+            tools:node="remove" />
     </application>
 
 </manifest>
