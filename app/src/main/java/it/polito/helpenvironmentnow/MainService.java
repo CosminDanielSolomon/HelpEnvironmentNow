@@ -85,7 +85,7 @@ public class MainService extends IntentService implements MyLocationListener {
             /* Build the json object filling it with data from Raspberry Pi and location data */
             JsonBuilder jsonBuilder = new JsonBuilder();
             JSONObject dataBlock = jsonBuilder.parseAndBuildJson(curLocation, raspberryPi.getTempHumMetaData(),
-                    raspberryPi.getFixedSensorsData(), raspberryPi.getVariableSensorsData());
+                    raspberryPi.getFixedSensorsData(), raspberryPi.getDhtVariableSensorsData());
             if(NetworkInfo.isNetworkAvailable(this)) {
                 /* Send json object to the server */
                 Log.d("MainService", "Network available!");

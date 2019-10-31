@@ -1,11 +1,10 @@
 package it.polito.helpenvironmentnow.Helper;
 
-public class TempHumMetaData {
+public class PmMetaData {
     private int numberOfReads;
     private int readLength;
     private int timestampLength;
-    private int temperatureLength;
-    private int humidityLength;
+    private int pmValueLength;
     private int sensorIdLength;
 
     public int getNumberOfReads() {
@@ -32,20 +31,12 @@ public class TempHumMetaData {
         this.timestampLength = timestampLength;
     }
 
-    public int getTemperatureLength() {
-        return temperatureLength;
+    public int getPmValueLength() {
+        return pmValueLength;
     }
 
-    public void setTemperatureLength(int temperatureLength) {
-        this.temperatureLength = temperatureLength;
-    }
-
-    public int getHumidityLength() {
-        return humidityLength;
-    }
-
-    public void setHumidityLength(int humidityLength) {
-        this.humidityLength = humidityLength;
+    public void setPmValueLength(int pmValueLength) {
+        this.pmValueLength = pmValueLength;
     }
 
     public int getSensorIdLength() {

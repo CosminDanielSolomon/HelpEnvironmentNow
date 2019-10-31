@@ -13,8 +13,8 @@ import java.nio.charset.StandardCharsets;
 public class JsonBuilder {
 
     public JSONObject parseAndBuildJson(Location location, TempHumMetaData tempHumMetaData, byte[] fixedSensorsData, byte[] variableSensorsData) {
-        int numberOfMessages = tempHumMetaData.getNumberOfMessages();
-        int messageLength = tempHumMetaData.getMessageLength();
+        int numberOfMessages = tempHumMetaData.getNumberOfReads();
+        int messageLength = tempHumMetaData.getReadLength();
         int timestampLength = tempHumMetaData.getTimestampLength();
         int temperatureLength = tempHumMetaData.getTemperatureLength();
         int humidityLength = tempHumMetaData.getHumidityLength();
