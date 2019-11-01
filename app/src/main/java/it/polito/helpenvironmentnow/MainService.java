@@ -69,8 +69,8 @@ public class MainService extends IntentService implements MyLocationListener {
     protected void onHandleIntent(Intent intent) {
         /* the remote device is the the Raspberry Pi */
         String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
-        RaspberryPi raspberryPi = new RaspberryPi();
-        boolean readResult = raspberryPi.connectAndRead(remoteDeviceMacAddress);
+        RaspberryPi rPi = new RaspberryPi();
+        boolean readResult = rPi.connectAndRead(remoteDeviceMacAddress);
         if(readResult) {
             /* readResult = true -> Data has been read correctly from Raspberry Pi */
             LocationInfo.getCurrentLocation(getApplicationContext(), this);
@@ -84,8 +84,8 @@ public class MainService extends IntentService implements MyLocationListener {
             }
             /* Build the json object filling it with data from Raspberry Pi and location data */
             JsonBuilder jsonBuilder = new JsonBuilder();
-            JSONObject dataBlock = jsonBuilder.parseAndBuildJson(curLocation, raspberryPi.getTempHumMetaData(),
-                    raspberryPi.getFixedSensorsData(), raspberryPi.getDhtVariableSensorsData());
+            JSONObject dataBlock = jsonBuilder.parseAndBuildJson(curLocation, rPi.getDhtMetaData(),
+                    rPi.getDhtFixedData(), rPi.getDhtVariableData(), rPi.getPmMetaData(), rPi.getPmVariableData());
             if(NetworkInfo.isNetworkAvailable(this)) {
                 /* Send json object to the server */
                 Log.d("MainService", "Network available!");

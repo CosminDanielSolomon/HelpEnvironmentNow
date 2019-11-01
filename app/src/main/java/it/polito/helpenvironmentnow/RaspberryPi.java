@@ -11,8 +11,8 @@ import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 
+import it.polito.helpenvironmentnow.Helper.DhtMetaData;
 import it.polito.helpenvironmentnow.Helper.PmMetaData;
-import it.polito.helpenvironmentnow.Helper.TempHumMetaData;
 
 public class RaspberryPi {
 
@@ -31,17 +31,17 @@ public class RaspberryPi {
 
     private static final int PM_NUMBER_OF_READS_CHARS = 8; // the number of chars used to represent the length(in bytes) of number of pm reads
     private static final int PM_READ_LENGTH_CHARS = 4; // the number of chars used to represent the length(in bytes) of a pm read
-    private static final int PM_VALUE_LENGTH_CHARS = 4; // the number of chars used to represent the length(in bytes) of pm measure(both pm2.5 and pm10)
+    private static final int PM_VALUE_LENGTH_CHARS = 1; // the number of chars used to represent the length(in bytes) of pm measure(both pm2.5 and pm10)
     private static final int PM_META_DATA_CHARS = PM_NUMBER_OF_READS_CHARS + PM_READ_LENGTH_CHARS +
             TIMESTAMP_LENGTH_CHARS + PM_VALUE_LENGTH_CHARS + SENSOR_ID_LENGTH_CHARS;
 
     private BluetoothAdapter bluetoothAdapter;
-    private TempHumMetaData tempHumMetaData; // object fields will be set inside "readTempHumMetaData" after receiving them from raspberry
-    private byte[] fixedSensorsData; // contains the fixed sensor data -> temperature sensor id and humidity sensor id
-    private byte[] dhtVariableSensorsData; // contains the variable sensor data(with timestamps) received from raspberry
+    private DhtMetaData dhtMetaData; // object fields will be set inside "readTempHumMetaData" after receiving them from raspberry
+    private byte[] dhtFixedData; // contains the fixed sensor data -> temperature sensor id and humidity sensor id
+    private byte[] dhtVariableData; // contains the variable sensor data(with timestamps) received from raspberry
 
     private PmMetaData pmMetaData;
-    private byte[] pmVariableSensorsData; // contains the variable sensor data(with timestamps) received from raspberry
+    private byte[] pmVariableData; // contains the variable sensor data(with timestamps) received from raspberry
 
     public RaspberryPi() {
 
@@ -58,21 +58,21 @@ public class RaspberryPi {
         return result;
     }
 
-    public TempHumMetaData getTempHumMetaData() {
-        return tempHumMetaData;
+    public DhtMetaData getDhtMetaData() {
+        return dhtMetaData;
     }
-    public byte[] getFixedSensorsData() {
-        return fixedSensorsData;
+    public byte[] getDhtFixedData() {
+        return dhtFixedData;
     }
-    public byte[] getDhtVariableSensorsData() {
-        return dhtVariableSensorsData;
+    public byte[] getDhtVariableData() {
+        return dhtVariableData;
     }
 
     public PmMetaData getPmMetaData() {
         return pmMetaData;
     }
-    public byte[] getPmVariableSensorsData() {
-        return pmVariableSensorsData;
+    public byte[] getPmVariableData() {
+        return pmVariableData;
     }
 
     private void readSocketData(InputStream socketInputStream, byte[] buffer, int size) throws IOException {
@@ -86,7 +86,7 @@ public class RaspberryPi {
     }
 
     // This method reads the number of messages that follows and their size and sets the private
-    // fields of the object TempHumMetaData
+    // fields of the object DhtMetaData
     private void readTempHumMetaData(InputStream socketInputStream) throws IOException {
         byte[] buffer = new byte[DHT_META_DATA_CHARS];
 
@@ -97,34 +97,34 @@ public class RaspberryPi {
 
     private void parseDhtMetaData(String strMetaData) {
         int bIndex = 0, eIndex = DHT_NUMBER_OF_READS_CHARS;
-        tempHumMetaData = new TempHumMetaData();
-        tempHumMetaData.setNumberOfReads(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+        dhtMetaData = new DhtMetaData();
+        dhtMetaData.setNumberOfReads(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
         bIndex = eIndex;
         eIndex += DHT_READ_LENGTH_CHARS;
-        tempHumMetaData.setReadLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+        dhtMetaData.setReadLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
         bIndex = eIndex;
         eIndex += SENSOR_ID_LENGTH_CHARS;
-        tempHumMetaData.setSensorIdLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+        dhtMetaData.setSensorIdLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
         bIndex = eIndex;
         eIndex += TIMESTAMP_LENGTH_CHARS;
-        tempHumMetaData.setTimestampLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+        dhtMetaData.setTimestampLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
         bIndex = eIndex;
         eIndex += TEMPERATURE_LENGTH_CHARS;
-        tempHumMetaData.setTemperatureLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+        dhtMetaData.setTemperatureLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
         bIndex = eIndex;
         eIndex += HUMIDITY_LENGTH_CHARS;
-        tempHumMetaData.setHumidityLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+        dhtMetaData.setHumidityLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
     }
 
     private void readFixedSensorsData(InputStream socketInputStream) throws IOException {
         final int sensorIds = 2; // one sensorId for temperature and one for humidity
-        int totalDataSize = tempHumMetaData.getSensorIdLength() * sensorIds;
-        fixedSensorsData = new byte[totalDataSize];
+        int totalDataSize = dhtMetaData.getSensorIdLength() * sensorIds;
+        dhtFixedData = new byte[totalDataSize];
 
-        readSocketData(socketInputStream, fixedSensorsData, totalDataSize);
+        readSocketData(socketInputStream, dhtFixedData, totalDataSize);
     }
 
-    // This method receives all the messages from raspberry and save them into "dhtVariableSensorsData" array
+    // This method receives all the messages from raspberry and save them into "dhtVariableData" array
     private void readVariableData(InputStream socketInputStream, int totalDataSize, byte[] variableSensorsData) throws IOException {
         final int SINGLE_READ_SIZE = 2048; // bytes to read with a single call to "read()"
 
@@ -214,13 +214,13 @@ public class RaspberryPi {
                     InputStream socketInputStream = socket.getInputStream();
                     readTempHumMetaData(socketInputStream);
                     readFixedSensorsData(socketInputStream);
-                    int totalDataSize = tempHumMetaData.getNumberOfReads() * tempHumMetaData.getReadLength();
-                    dhtVariableSensorsData = new byte[totalDataSize];
-                    readVariableData(socketInputStream, totalDataSize, dhtVariableSensorsData);
+                    int totalDataSize = dhtMetaData.getNumberOfReads() * dhtMetaData.getReadLength();
+                    dhtVariableData = new byte[totalDataSize];
+                    readVariableData(socketInputStream, totalDataSize, dhtVariableData);
                     readPmMetaData(socketInputStream);
                     totalDataSize = pmMetaData.getNumberOfReads() * pmMetaData.getReadLength();
-                    pmVariableSensorsData = new byte[totalDataSize];
-                    readVariableData(socketInputStream, totalDataSize, pmVariableSensorsData);
+                    pmVariableData = new byte[totalDataSize];
+                    readVariableData(socketInputStream, totalDataSize, pmVariableData);
                     read = true;
                 } catch (IOException e) {
                     Log.e(TAG, "Read from socket failed!");

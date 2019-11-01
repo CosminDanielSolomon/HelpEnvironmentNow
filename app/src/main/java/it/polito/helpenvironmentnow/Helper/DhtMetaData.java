@@ -1,6 +1,6 @@
 package it.polito.helpenvironmentnow.Helper;
 
-public class TempHumMetaData {
+public class DhtMetaData {
     private int numberOfReads;
     private int readLength;
     private int timestampLength;
