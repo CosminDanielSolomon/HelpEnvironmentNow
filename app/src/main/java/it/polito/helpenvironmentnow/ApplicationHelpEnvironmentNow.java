@@ -44,7 +44,7 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
         // wake up the app when any beacon is seen (you can specify specific id filers in the parameters below)
         myBeaconNamespaceId = Identifier.parse(namespaceId);
         myBeaconInstanceId = Identifier.parse(instanceId);
-        region = new Region("com.example.myapp.boostrapRegion", myBeaconNamespaceId, myBeaconInstanceId, null);
+        region = new Region("it.polito.helpenvironmentnow.boostrapRegion", myBeaconNamespaceId, myBeaconInstanceId, null);
         regionBootstrap = new RegionBootstrap(this, region);
     }
 
