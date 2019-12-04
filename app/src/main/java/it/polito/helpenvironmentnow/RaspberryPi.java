@@ -8,6 +8,7 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 
@@ -221,9 +222,13 @@ public class RaspberryPi {
                     totalDataSize = pmMetaData.getNumberOfReads() * pmMetaData.getReadLength();
                     pmVariableData = new byte[totalDataSize];
                     readVariableData(socketInputStream, totalDataSize, pmVariableData);
+                    OutputStream socketOutputStream = socket.getOutputStream();
+                    byte[] ack = "ok".getBytes();
+                    socketOutputStream.write(ack);
+                    socketOutputStream.flush();
                     read = true;
                 } catch (IOException e) {
-                    Log.e(TAG, "Read from socket failed!");
+                    Log.e(TAG, "Read or write to socket failed!");
                     e.printStackTrace();
                 } finally {
                     try {

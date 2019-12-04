@@ -50,19 +50,22 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
 
     @Override
     public void didDetermineStateForRegion(int state, Region arg1) {
-        try {
-            beaconManager.startRangingBeaconsInRegion(region);
-            beaconManager.addRangeNotifier(this);
-            Log.d(TAG, "didDetermineStateForRegion try executed");
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
         if(state == INSIDE) {
-            Log.d(TAG, "didDetermineStateForRegion(...) INSIDE");
-
-        } else {
-            Log.d(TAG, "didDetermineStateForRegion(...) OUTSIDE");
-        }
+            try {
+                beaconManager.addRangeNotifier(this);
+                beaconManager.startRangingBeaconsInRegion(region);
+                Log.d(TAG, "start RANGING beacons in region");
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }/* else {
+            try {
+                beaconManager.stopRangingBeaconsInRegion(region);
+                Log.d(TAG, "stop RANGING beacons in region");
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }*/
     }
 
     @Override

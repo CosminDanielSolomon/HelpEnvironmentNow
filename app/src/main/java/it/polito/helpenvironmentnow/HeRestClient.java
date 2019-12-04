@@ -2,6 +2,7 @@ package it.polito.helpenvironmentnow;
 
 import android.content.Context;
 import android.util.Log;
+import android.util.Patterns;
 
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.SyncHttpClient;
@@ -16,12 +17,15 @@ import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 
 public class HeRestClient {
-    private final static String HE_WEB_SERVICE_URL = "http://10.1.23.126:8080/HelpEnvironment/helpenvironment/he/newdata";
+    private String ipAddress = "192.168.137.1";
+    private String port = "8080";
+    private String HE_WEB_SERVICE_URL = "http://" + ipAddress + ":" + port + "/HelpEnvironment/helpenvironment/he/newdata";
     private SyncHttpClient restClient;
     private boolean sendResult;
 
     public HeRestClient() {
         this.restClient = new SyncHttpClient();
+        Patterns.IP_ADDRESS.matcher(ipAddress).matches();
     }
 
     public void sendToServer(final Context context, final JSONObject dataBlock) {

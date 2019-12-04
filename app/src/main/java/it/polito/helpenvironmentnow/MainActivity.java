@@ -17,11 +17,20 @@ public class MainActivity extends AppCompatActivity {
 
     private String TAG = "AppHelpNow";
     private static final int PERMISSION_REQUEST_FINE_LOCATION = 1;
+    private Button btnConfig;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        btnConfig = findViewById(R.id.buttonConfig);
+        btnConfig.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getApplicationContext(), ConfigActivity.class);
+                startActivity(intent);
+            }
+        });
         /* TODO remove this part */
         Button btnConnect = findViewById(R.id.buttonConnect);
         btnConnect.setOnClickListener(new View.OnClickListener() {
