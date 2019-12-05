@@ -32,10 +32,10 @@ public class UploadWorker extends Worker {
             Looper.prepare();
         }
         MyDb myDb = new MyDb(context);
-        HeRestClient heRestClient = new HeRestClient();
+        HeRestClient heRestClient = new HeRestClient(context);
         for(StoredJson storedJson : myDb.getAllStoredJson()) {
             Log.d("SensorUpload","id " + storedJson.id);
-            sendResult = heRestClient.sendToServerWithResult(context, storedJson.jsonSave);
+            sendResult = heRestClient.sendToServerWithResult(storedJson.jsonSave);
             if(!sendResult) {
                 Objects.requireNonNull(Looper.myLooper()).quit();
                 myDb.closeDb();
