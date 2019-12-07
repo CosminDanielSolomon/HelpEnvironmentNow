@@ -6,13 +6,16 @@ import android.util.Log;
 import android.util.Patterns;
 
 import com.loopj.android.http.AsyncHttpResponseHandler;
+import com.loopj.android.http.MySSLSocketFactory;
 import com.loopj.android.http.SyncHttpClient;
 
 import org.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
 
 import cz.msebera.android.httpclient.Header;
+import cz.msebera.android.httpclient.auth.AuthScope;
 import cz.msebera.android.httpclient.entity.StringEntity;
 import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
 import it.polito.helpenvironmentnow.Storage.MyDb;
@@ -20,20 +23,21 @@ import it.polito.helpenvironmentnow.Storage.MyDb;
 public class HeRestClient {
 
     private Context context;
-    private String ipAddress = "192.168.137.1";
-    private String port = "8080";
-    private String HE_WEB_SERVICE_URL = "http://" + ipAddress + ":" + port + "/HelpEnvironment/helpenvironment/he/newdata";
+    private String ipAddress = "192.168.0.104";
+    private String port = "8443";
     private SyncHttpClient restClient;
     private boolean sendResult;
 
     public HeRestClient(Context context) {
         this.restClient = new SyncHttpClient();
+        this.restClient.setBasicAuth("androidClient","a147_mx5:3");
+
         this.context = context;
         updateServerAddress(context);
     }
 
     public void sendToServer(final JSONObject dataBlock) {
-
+        String HE_WEB_SERVICE_URL = "https://" + ipAddress + ":" + port + "/HelpEnvironment/helpenvironment/he/newdata";
         StringEntity entity = new StringEntity(dataBlock.toString(), StandardCharsets.UTF_8);
         restClient.put(context, HE_WEB_SERVICE_URL, entity, "application/json", new AsyncHttpResponseHandler() {
             @Override
@@ -53,6 +57,7 @@ public class HeRestClient {
     }
 
     public boolean sendToServerWithResult(final String dataBlock) {
+        String HE_WEB_SERVICE_URL = "https://" + ipAddress + ":" + port + "/HelpEnvironment/helpenvironment/he/newdata";
         StringEntity entity = new StringEntity(dataBlock, StandardCharsets.UTF_8);
         AsyncHttpResponseHandler responseHandler = new AsyncHttpResponseHandler() {
             @Override
@@ -80,6 +85,8 @@ public class HeRestClient {
         String PORT_DEF = context.getString(R.string.PORT_DEF);
         String ipSave = sharedPref.getString(IP_KEY, IP_DEF);
         String portSave = sharedPref.getString(PORT_KEY, PORT_DEF);
+        Log.d("Client", "ipSave:"+ipSave);
+        Log.d("Client", "portSave:"+portSave);
         if(!ipSave.equals(IP_DEF))
             ipAddress = ipSave;
         if(!portSave.equals(PORT_DEF))
