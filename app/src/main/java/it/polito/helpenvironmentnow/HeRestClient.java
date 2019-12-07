@@ -3,7 +3,6 @@ package it.polito.helpenvironmentnow;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
-import android.util.Patterns;
 
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.MySSLSocketFactory;
@@ -15,7 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 
 import cz.msebera.android.httpclient.Header;
-import cz.msebera.android.httpclient.auth.AuthScope;
 import cz.msebera.android.httpclient.entity.StringEntity;
 import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
 import it.polito.helpenvironmentnow.Storage.MyDb;
@@ -29,10 +27,10 @@ public class HeRestClient {
     private boolean sendResult;
 
     public HeRestClient(Context context) {
-        this.restClient = new SyncHttpClient();
-        this.restClient.setBasicAuth("androidClient","a147_mx5:3");
-
         this.context = context;
+        restClient = new SyncHttpClient();
+        acceptAllCertificate();
+        restClient.setBasicAuth("androidClient","a147_mx5:3");
         updateServerAddress(context);
     }
 
@@ -75,6 +73,21 @@ public class HeRestClient {
         restClient.put(context, HE_WEB_SERVICE_URL, entity, "application/json", responseHandler);
 
         return sendResult;
+    }
+
+    private void acceptAllCertificate() {
+        MySSLSocketFactory socketFactory = null;
+        try {
+            KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            trustStore.load(null, null);
+            socketFactory = new MySSLSocketFactory(trustStore);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (socketFactory != null) {
+            socketFactory.setHostnameVerifier(MySSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+            restClient.setSSLSocketFactory(socketFactory);
+        }
     }
 
     private void updateServerAddress(Context context) {
