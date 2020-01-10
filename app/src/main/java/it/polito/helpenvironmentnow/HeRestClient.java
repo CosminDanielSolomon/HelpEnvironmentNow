@@ -21,7 +21,7 @@ import it.polito.helpenvironmentnow.Storage.MyDb;
 public class HeRestClient {
 
     private Context context;
-    private String ipAddress = "192.168.0.104";
+    private String ipAddress = "192.168.0.109";
     private String port = "8443";
     private SyncHttpClient restClient;
     private boolean sendResult;
@@ -50,6 +50,12 @@ public class HeRestClient {
                 myDb.storeJsonObject(dataBlock);
                 myDb.closeDb();
                 MyWorkerManager.enqueueNetworkWorker(context);
+            }
+
+            @Override
+            public void onRetry(int retryNo) {
+                super.onRetry(retryNo);
+                Log.d("AppHelpEnv", "Retrychiamato");
             }
         });
     }

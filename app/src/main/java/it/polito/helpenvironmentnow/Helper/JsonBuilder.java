@@ -29,10 +29,10 @@ public class JsonBuilder {
 
         JSONObject dataBlock = new JSONObject();
         try {
-            dataBlock.put("geoHash", encodeLocation(location));
-            dataBlock.put("altitude", location.getAltitude());
-            dataBlock.put("sensorIdTemperature", parseSensorIdTemperature(fixedSensorsData, dhtSensorIdLength));
-            dataBlock.put("sensorIdHumidity", parseSensorIdHumidity(fixedSensorsData, dhtSensorIdLength));
+            dataBlock.put("geo", encodeLocation(location));
+            dataBlock.put("alt", location.getAltitude());
+            dataBlock.put("idTemp", parseSensorIdTemperature(fixedSensorsData, dhtSensorIdLength));
+            dataBlock.put("idHum", parseSensorIdHumidity(fixedSensorsData, dhtSensorIdLength));
             dataBlock.put("dhtData", parseDhtData(dhtVariableData, dhtReads, dhtReadLength, dhtTimestampLength, temperatureLength, humidityLength));
             dataBlock.put("pmData", parsePmData(pmVariableData, pmReads, pmReadLength, pmTimestampLength, pmValueLength, pmSensorIdLength));
         } catch (JSONException e) {
@@ -70,14 +70,14 @@ public class JsonBuilder {
             offset = readCount * dhtReadLength;
             strMessage = new String(dhtData, offset, dhtReadLength, StandardCharsets.UTF_8);
             int timestamp = Integer.parseInt(strMessage.substring(0, timestampLength));
-            float temperature = Float.parseFloat(strMessage.substring(timestampLength,
+            double temperature = Double.parseDouble(strMessage.substring(timestampLength,
                     timestampLength + temperatureLength));
-            float humidity = Float.parseFloat(strMessage.substring(timestampLength + temperatureLength,
+            double humidity = Double.parseDouble(strMessage.substring(timestampLength + temperatureLength,
                     timestampLength + temperatureLength + humidityLength));
             JSONObject dhtRead = new JSONObject();
-            dhtRead.put("timestamp", timestamp);
-            dhtRead.put("temperature", temperature);
-            dhtRead.put("humidity", humidity);
+            dhtRead.put("ts", timestamp);
+            dhtRead.put("t", temperature);
+            dhtRead.put("h", humidity);
             dhtArray.put(dhtRead);
         }
 
@@ -102,11 +102,11 @@ public class JsonBuilder {
             int sensorId10 = Integer.parseInt(strMessage.substring(timestampLength + pmValueLength + pmValueLength + sensorIdLength,
                     timestampLength + pmValueLength + pmValueLength + sensorIdLength + sensorIdLength));
             JSONObject jsonPmRead = new JSONObject();
-            jsonPmRead.put("timestamp", timestamp);
-            jsonPmRead.put("sensorIdPm25", sensorId25);
-            jsonPmRead.put("pm25Value", pm25);
-            jsonPmRead.put("sensorIdPm10", sensorId10);
-            jsonPmRead.put("pm10Value", pm10);
+            jsonPmRead.put("ts", timestamp);
+            jsonPmRead.put("idP2", sensorId25);
+            jsonPmRead.put("p2", pm25);
+            jsonPmRead.put("idP1", sensorId10);
+            jsonPmRead.put("p1", pm10);
             pmArray.put(jsonPmRead);
         }
 

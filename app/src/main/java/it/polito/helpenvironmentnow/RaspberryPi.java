@@ -189,7 +189,7 @@ public class RaspberryPi {
         return socket;
     }
 
-    // This method returns TRUE if all the data has ben received and is ready to be sent to the server
+    // This method returns TRUE if all the data has ben received and acknowledged to Raspberry Pi
     private boolean connectAndReadFromRaspberry(String remoteDeviceMacAddress) {
         boolean read = false;
 
