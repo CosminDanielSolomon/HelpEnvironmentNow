@@ -1,8 +1,10 @@
 package it.polito.helpenvironmentnow;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -17,7 +19,9 @@ public class MainActivity extends AppCompatActivity {
 
     private String TAG = "AppHelpNow";
     private static final int PERMISSION_REQUEST_FINE_LOCATION = 1;
-    private Button btnConfig;
+    private Button btnConfig, btnMode;
+    private boolean movementMode;
+    private SharedPreferences sharedPref;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,6 +33,28 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Intent intent = new Intent(getApplicationContext(), ConfigActivity.class);
                 startActivity(intent);
+            }
+        });
+
+        sharedPref = getSharedPreferences(getString(R.string.config_file), Context.MODE_PRIVATE);
+        movementMode = sharedPref.getBoolean(getString(R.string.MODE), false);
+        btnMode = findViewById(R.id.buttonStartStopTracking);
+        btnMode.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(movementMode) {
+                    Log.d(TAG, "movementMode TRUE; stopService...");
+                    Intent intent = new Intent(getApplicationContext(), LocationService.class);
+                    stopService(intent);
+                    movementMode = false;
+                    Log.d(TAG, "movementMode set to FALSE; stopService performed");
+                } else {
+                    Log.d(TAG, "movementMode FALSE; startService...");
+                    Intent intent = new Intent(getApplicationContext(), LocationService.class);
+                    ContextCompat.startForegroundService(getApplicationContext(), intent);
+                    movementMode = true;
+                    Log.d(TAG, "movementMode set to TRUE; startService performed");
+                }
             }
         });
         /* TODO remove this part */
@@ -83,5 +109,13 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
         }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putBoolean(getString(R.string.MODE), movementMode);
+        editor.commit();
     }
 }

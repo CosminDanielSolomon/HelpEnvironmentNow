@@ -1,7 +1,9 @@
 package it.polito.helpenvironmentnow;
 
 import android.app.Application;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.RemoteException;
 
 import androidx.annotation.NonNull;
@@ -35,6 +37,7 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
     public void onCreate() {
         super.onCreate();
         Log.d(TAG, "App started up");
+        initializeMovementMode();
         beaconManager = BeaconManager.getInstanceForApplication(this);
         // To detect proprietary beacons, you must add a line like below corresponding to your beacon
         // type.  Do a web search for "setBeaconLayout" to get the proper expression.
@@ -115,5 +118,15 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
     @Override
     public Configuration getWorkManagerConfiguration() {
         return new Configuration.Builder().setExecutor(Executors.newSingleThreadExecutor()).build();
+    }
+
+    private void initializeMovementMode() {
+        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(
+                getString(R.string.config_file), Context.MODE_PRIVATE);
+        if(!sharedPref.contains(getString(R.string.MODE))) {
+            SharedPreferences.Editor editor = sharedPref.edit();
+            editor.putBoolean(getString(R.string.MODE), false);
+            editor.commit();
+        }
     }
 }
