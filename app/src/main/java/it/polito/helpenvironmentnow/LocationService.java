@@ -2,13 +2,9 @@ package it.polito.helpenvironmentnow;
 
 import android.Manifest;
 import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.location.Location;
 import android.os.Build;
 import android.os.Handler;
@@ -19,9 +15,6 @@ import android.os.Message;
 import android.os.Process;
 import android.util.Log;
 
-import androidx.annotation.RequiresApi;
-import androidx.core.app.NotificationCompat;
-
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -30,6 +23,7 @@ import com.google.android.gms.location.LocationServices;
 
 import java.util.concurrent.TimeUnit;
 
+import it.polito.helpenvironmentnow.Helper.ServiceNotification;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 
 // This SERVICE is enabled when the user activates the MOVEMENT MODE and it is used to get
@@ -83,10 +77,13 @@ public class LocationService extends Service {
     public void onCreate() {
         // A foreground service in order to work in Android has to show a notification, as quoted by
         // the official guide: "Foreground services must display a Notification."
+        Notification notification;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) // check if Android version is 8 or higher
-            startMyOwnForeground(); // put the service in a foreground state - for Android 8+
+            notification = ServiceNotification.getMyOwnNotification(this, "HelpEnvironmentNow Service",
+                    "MOVEMENT mode is ON", "Continuous location tracking is enabled"); // foreground service notification for Android 8+
         else
-            startForeground(1, new Notification()); // put the service in a foreground state - for Android 7 or below
+            notification =  new Notification(); // foreground service notification for Android 7.x or below
+        startForeground(1, notification);
 
         locationCallback = new LocationCallback() {
             @Override
@@ -144,27 +141,5 @@ public class LocationService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return null;
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private void startMyOwnForeground(){
-        String NOTIFICATION_CHANNEL_ID = "it.polito.helpenvironmentnow";
-        String channelName = "Background HelpEnvironmentNow Service";
-        NotificationChannel chan = new NotificationChannel(NOTIFICATION_CHANNEL_ID, channelName, NotificationManager.IMPORTANCE_NONE);
-        chan.setLightColor(Color.BLUE);
-        chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
-        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        assert manager != null;
-        manager.createNotificationChannel(chan);
-
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID);
-        Notification notification = notificationBuilder.setOngoing(true)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentTitle("MOVEMENT mode is ON")
-                .setContentText("Continuous location tracking is enabled")
-                .setPriority(NotificationManager.IMPORTANCE_MIN)
-                .setCategory(Notification.CATEGORY_SERVICE)
-                .build();
-        startForeground(1, notification);
     }
 }
