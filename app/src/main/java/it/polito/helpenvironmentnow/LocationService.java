@@ -30,6 +30,13 @@ import com.google.android.gms.location.LocationServices;
 
 import java.util.concurrent.TimeUnit;
 
+import it.polito.helpenvironmentnow.Storage.MyDb;
+
+// This SERVICE is enabled when the user activates the MOVEMENT MODE and it is used to get
+// continuous location updates. The locations are saved into a local database; in this way
+// the MainService can get the saved locations when it needs and can use them to match with the
+// measures taken from the Rasperry Pi using the timestamp as matching criteria.
+// The SERVICE runs indefinitely until the user stops it by disabling the MOVEMENT MODE.
 public class LocationService extends Service {
     private String TAG = "LocService";
 
@@ -38,6 +45,8 @@ public class LocationService extends Service {
 
     private FusedLocationProviderClient locationClient;
     private LocationCallback locationCallback;
+
+    private MyDb myDb;
 
     // Handler that receives messages from the thread
     private final class ServiceHandler extends Handler {
@@ -48,10 +57,12 @@ public class LocationService extends Service {
 
         @Override
         public void handleMessage(Message msg) {
-
+            // Set the location request in order to receive continuous location updates
             LocationRequest locationRequest = LocationRequest.create();
-            locationRequest.setInterval(5000);
+            locationRequest.setInterval(1000);
+            locationRequest.setFastestInterval(1000);
             locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+            locationRequest.setMaxWaitTime(4000);
             locationClient = LocationServices.
                     getFusedLocationProviderClient(getApplicationContext());
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -63,16 +74,8 @@ public class LocationService extends Service {
                 }
             }
             locationClient.requestLocationUpdates(locationRequest, locationCallback, serviceLooper);
+            myDb = new MyDb(getApplicationContext());
             Log.d(TAG, "requestLocationUpdates executed");
-
-            // Normally we would do some work here, like download a file.
-            // For our sample, we just sleep for 5 seconds.
-            /*try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                // Restore interrupt status.
-                Thread.currentThread().interrupt();
-            }*/
         }
     }
 
@@ -94,9 +97,11 @@ public class LocationService extends Service {
                 }
                 Log.d(TAG, "Number:" + locationResult.getLocations().size());
                 for (Location location : locationResult.getLocations()) {
-                    long seconds = TimeUnit.MILLISECONDS.toSeconds(location.getTime());
-                    Log.d(TAG, "t:" + seconds + " lat:" + location.getLatitude() + " long:"
+                    int timestamp =  ((Long)TimeUnit.MILLISECONDS.toSeconds(location.getTime())).intValue();
+                    Log.d(TAG, "t:" + timestamp + " lat:" + location.getLatitude() + " long:"
                             + location.getLongitude() + " alt:" + location.getAltitude());
+                    myDb.insertPosition(timestamp, location.getLatitude(), location.getLongitude(),
+                            location.getAltitude());
                 }
             }
         };
@@ -133,6 +138,7 @@ public class LocationService extends Service {
     public void onDestroy() {
         Log.d(TAG, "onDestroy called");
         locationClient.removeLocationUpdates(locationCallback);
+        myDb.closeDb();
     }
 
     @Override

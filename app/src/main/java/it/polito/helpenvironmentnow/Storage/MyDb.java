@@ -9,11 +9,13 @@ import org.json.JSONObject;
 public class MyDb {
     private static final String LOCAL_DB_NAME = "DB_JSON_CACHING";
     private LocalStore db;
-    private StoredJsonDao storedJsonDao; // used to access the database
+    private StoredJsonDao storedJsonDao; // used to access the StoredJson table of the database
+    private PositionsDao positionsDao; // used to access the Position table saved into database
 
     public MyDb(Context context) {
         db = Room.databaseBuilder(context, LocalStore.class, LOCAL_DB_NAME).build();
-        this.storedJsonDao = db.storedJsonDao();
+        storedJsonDao = db.storedJsonDao();
+        positionsDao = db.positionsDao();
     }
 
     public void storeJsonObject(JSONObject jsonObject) {
@@ -31,7 +33,26 @@ public class MyDb {
         return storedJsonDao.getAllStoredJson();
     }
 
+    public void insertPosition(int t, double lat, double lon, double alt) {
+        Position currentPosition = new Position();
+        currentPosition.timestamp = t;
+        currentPosition.latitude = lat;
+        currentPosition.longitude = lon;
+        currentPosition.altitude = alt;
+        positionsDao.insertPosition(currentPosition);
+    }
+
+    public Position[] selectPositions(int startT, int endT) {
+        return positionsDao.selectPositions(startT, endT);
+    }
+
+    public void deletePositions(int endT) {
+        positionsDao.deletePositions(endT);
+    }
+
     public void closeDb() {
         db.close();
     }
+
+
 }

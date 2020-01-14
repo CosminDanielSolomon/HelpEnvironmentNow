@@ -8,11 +8,11 @@ import androidx.room.Query;
 @Dao
 public interface StoredJsonDao {
     @Insert
-    public void insertJson(StoredJson storedJson);
+    void insertJson(StoredJson storedJson);
 
     @Delete
-    public void deleteJson(StoredJson storedJson);
+    void deleteJson(StoredJson storedJson);
 
     @Query("SELECT * FROM StoredJson")
-    public StoredJson[] getAllStoredJson();
+    StoredJson[] getAllStoredJson();
 }
