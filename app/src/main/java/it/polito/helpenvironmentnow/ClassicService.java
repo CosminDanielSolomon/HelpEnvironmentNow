@@ -24,12 +24,12 @@ import it.polito.helpenvironmentnow.Helper.NetworkInfo;
 import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 
-public class MainService extends IntentService implements MyLocationListener {
+public class ClassicService extends IntentService implements MyLocationListener {
 
     private Location curLocation;
     private boolean curLocationReady = false;
 
-    public MainService() {
+    public ClassicService() {
         super("RaspberryToServerService");
     }
 
@@ -78,7 +78,7 @@ public class MainService extends IntentService implements MyLocationListener {
             * is called and sets curLocationReady to true and so the while cycle will be interrupted
             * and the field curLocation will contain latitude, longitude, altitude */
             while(!curLocationReady) {
-                Log.d("MainService", "Inside wait while...");
+                Log.d("ClassicService", "Inside wait while...");
                 int WAIT_LOCATION_MS = 1000;
                 SystemClock.sleep(WAIT_LOCATION_MS);
             }
@@ -88,19 +88,19 @@ public class MainService extends IntentService implements MyLocationListener {
                     rPi.getDhtFixedData(), rPi.getDhtVariableData(), rPi.getPmMetaData(), rPi.getPmVariableData());
             if(NetworkInfo.isNetworkAvailable(this)) {
                 /* Send json object to the server */
-                Log.d("MainService", "Network available!");
+                Log.d("ClassicService", "Network available!");
                 HeRestClient heRestClient = new HeRestClient(getApplicationContext());
                 heRestClient.sendToServer(dataBlock);
             } else {
                 /* Network is not available, I store it in local database and I enqueue a work that
                  * the Worker Manager will execute when network became available */
-                Log.d("MainService", "Network NOT available!");
+                Log.d("ClassicService", "Network NOT available!");
                 MyDb myDb = new MyDb(getApplicationContext());
                 myDb.storeJsonObject(dataBlock);
                 myDb.closeDb();
                 MyWorkerManager.enqueueNetworkWorker(getApplicationContext());
             }
-            Log.d("MainService", "All executed!");
+            Log.d("ClassicService", "All executed!");
         }
     }
 
@@ -108,6 +108,6 @@ public class MainService extends IntentService implements MyLocationListener {
     public void locationCompleted(Location location) {
         curLocation = location;
         curLocationReady = true;
-        Log.d("MainService", "lat" + location.getLatitude()+"long"+location.getLongitude()+"alt"+location.getAltitude());
+        Log.d("ClassicService", "lat" + location.getLatitude()+"long"+location.getLongitude()+"alt"+location.getAltitude());
     }
 }

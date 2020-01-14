@@ -34,7 +34,7 @@ import it.polito.helpenvironmentnow.Storage.MyDb;
 
 // This SERVICE is enabled when the user activates the MOVEMENT MODE and it is used to get
 // continuous location updates. The locations are saved into a local database; in this way
-// the MainService can get the saved locations when it needs and can use them to match with the
+// the MovementService can get the saved locations when it needs and can use them to match with the
 // measures taken from the Rasperry Pi using the timestamp as matching criteria.
 // The SERVICE runs indefinitely until the user stops it by disabling the MOVEMENT MODE.
 public class LocationService extends Service {

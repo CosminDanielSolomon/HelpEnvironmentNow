@@ -32,14 +32,14 @@ public class LocationInfo {
                 if (location != null) {
                     if(!location.hasAltitude())
                         location.setAltitude(defaultAltitude);
-                    myLocationListener.locationCompleted(location); // fires the callback in MainService
+                    myLocationListener.locationCompleted(location); // fires the callback in ClassicService
                 } else {
                     Location defaultLocation = new Location(LocationManager.GPS_PROVIDER);
                     Log.d("LocationInfo", "lat" + defaultLocation.getLatitude()+"long"+defaultLocation.getLongitude()+"alt"+defaultLocation.getAltitude());
                     defaultLocation.setLatitude(defaultLatitude);
                     defaultLocation.setLongitude(defaultLongitude);
                     defaultLocation.setAltitude(defaultAltitude);
-                    myLocationListener.locationCompleted(defaultLocation); // fires the callback in MainService
+                    myLocationListener.locationCompleted(defaultLocation); // fires the callback in ClassicService
                 }
             }
         });

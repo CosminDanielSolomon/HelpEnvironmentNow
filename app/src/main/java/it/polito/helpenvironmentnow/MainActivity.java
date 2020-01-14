@@ -55,6 +55,9 @@ public class MainActivity extends AppCompatActivity {
                     movementMode = true;
                     Log.d(TAG, "movementMode set to TRUE; startService performed");
                 }
+                SharedPreferences.Editor editor = sharedPref.edit();
+                editor.putBoolean(getString(R.string.MODE), movementMode);
+                editor.commit();
             }
         });
         /* TODO remove this part */
@@ -62,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
         btnConnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(getApplicationContext(), MainService.class);
+                Intent intent = new Intent(getApplicationContext(), ClassicService.class);
                 intent.putExtra("remoteMacAddress", "B8:27:EB:C4:15:D6");
                 ContextCompat.startForegroundService(getApplicationContext(), intent);
                 Log.d(TAG, "Activity startService(...) performed");
@@ -109,13 +112,5 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
         }
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        SharedPreferences.Editor editor = sharedPref.edit();
-        editor.putBoolean(getString(R.string.MODE), movementMode);
-        editor.commit();
     }
 }
