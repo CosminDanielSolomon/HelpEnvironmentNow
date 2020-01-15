@@ -18,6 +18,7 @@ import it.polito.helpenvironmentnow.Helper.ParsedData;
 import it.polito.helpenvironmentnow.Helper.Parser;
 import it.polito.helpenvironmentnow.Helper.ServiceNotification;
 import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
+import it.polito.helpenvironmentnow.Storage.JsonTypes;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 
 public class ClassicService extends IntentService implements MyLocationListener {
@@ -78,7 +79,7 @@ public class ClassicService extends IntentService implements MyLocationListener 
                  * the Worker Manager will execute when network became available */
                 Log.d("ClassicService", "Network NOT available!");
                 MyDb myDb = new MyDb(getApplicationContext());
-                myDb.storeJsonObject(dataBlock);
+                myDb.storeJsonObject(dataBlock, JsonTypes.CLASSIC);
                 myDb.closeDb();
                 MyWorkerManager.enqueueNetworkWorker(getApplicationContext());
             }

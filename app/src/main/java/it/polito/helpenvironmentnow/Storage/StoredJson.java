@@ -7,5 +7,6 @@ import androidx.room.PrimaryKey;
 public class StoredJson {
     @PrimaryKey(autoGenerate = true)
     public int id;
+    public String type;
     public String jsonSave;
 }
