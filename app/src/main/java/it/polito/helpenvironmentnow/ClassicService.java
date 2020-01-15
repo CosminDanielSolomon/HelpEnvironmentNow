@@ -14,6 +14,8 @@ import it.polito.helpenvironmentnow.Helper.JsonBuilder;
 import it.polito.helpenvironmentnow.Helper.LocationInfo;
 import it.polito.helpenvironmentnow.Helper.MyLocationListener;
 import it.polito.helpenvironmentnow.Helper.NetworkInfo;
+import it.polito.helpenvironmentnow.Helper.ParsedData;
+import it.polito.helpenvironmentnow.Helper.Parser;
 import it.polito.helpenvironmentnow.Helper.ServiceNotification;
 import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
 import it.polito.helpenvironmentnow.Storage.MyDb;
@@ -58,10 +60,14 @@ public class ClassicService extends IntentService implements MyLocationListener 
                 int WAIT_LOCATION_MS = 1000;
                 SystemClock.sleep(WAIT_LOCATION_MS);
             }
+
             /* Build the json object filling it with data from Raspberry Pi and location data */
-            JsonBuilder jsonBuilder = new JsonBuilder();
-            JSONObject dataBlock = jsonBuilder.parseAndBuildJson(curLocation, rPi.getDhtMetaData(),
+            Parser parser = new Parser();
+            ParsedData parsedData = parser.parseEnvironmentalData(rPi.getDhtMetaData(),
                     rPi.getDhtFixedData(), rPi.getDhtVariableData(), rPi.getPmMetaData(), rPi.getPmVariableData());
+            JsonBuilder jsonBuilder = new JsonBuilder();
+            JSONObject dataBlock = jsonBuilder.buildClassicJson(curLocation, parsedData);
+
             if(NetworkInfo.isNetworkAvailable(this)) {
                 /* Send json object to the server */
                 Log.d("ClassicService", "Network available!");

@@ -56,7 +56,7 @@ public class LocationService extends Service {
             locationRequest.setInterval(1000);
             locationRequest.setFastestInterval(1000);
             locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-            locationRequest.setMaxWaitTime(4000);
+            locationRequest.setMaxWaitTime(5000);
             locationClient = LocationServices.
                     getFusedLocationProviderClient(getApplicationContext());
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -107,7 +107,7 @@ public class LocationService extends Service {
         // separate thread because the service normally runs in the process's
         // main thread, which we don't want to block.
         HandlerThread thread = new HandlerThread("LocationServiceHT",
-                Process.THREAD_PRIORITY_DEFAULT); // HandlerThread: Helper class that builds a
+                Process.THREAD_PRIORITY_BACKGROUND); // HandlerThread: Helper class that builds a
         // secondary thread that incorporates a Looper and a MessageQueue
         thread.start();
 

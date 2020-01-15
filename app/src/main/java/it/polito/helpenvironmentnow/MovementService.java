@@ -4,8 +4,16 @@ import android.app.IntentService;
 import android.app.Notification;
 import android.content.Intent;
 import android.os.Build;
+import android.util.Log;
 
+import org.json.JSONObject;
+
+import it.polito.helpenvironmentnow.Helper.JsonBuilder;
+import it.polito.helpenvironmentnow.Helper.NetworkInfo;
 import it.polito.helpenvironmentnow.Helper.ServiceNotification;
+import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
+import it.polito.helpenvironmentnow.Storage.MyDb;
+import it.polito.helpenvironmentnow.Storage.Position;
 
 public class MovementService extends IntentService {
 
@@ -29,6 +37,25 @@ public class MovementService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
-
+        MyDb myDb = new MyDb(getApplicationContext());
+        Position[] positions = myDb.selectPositions(1579093200, 1579096800);
+        for(Position p : positions) {
+            Log.d("TEST", p.timestamp + " lat:" + p.latitude + " lon:" + p.longitude + " alt:" + p.altitude);
+        }
+        myDb.closeDb();
+        /* the remote device is the the Raspberry Pi */
+//        String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
+//        RaspberryPi rPi = new RaspberryPi();
+//        boolean readResult = rPi.connectAndRead(remoteDeviceMacAddress);
+//        if(readResult) {
+//            /* readResult = true -> Data has been read correctly from Raspberry Pi */
+//
+//            /* Build the json object filling it with data from Raspberry Pi and location data */
+//            JsonBuilder jsonBuilder = new JsonBuilder();
+//
+//            //JSONObject dataBlock = jsonBuilder.buildClassicJson(curLocation, rPi.getDhtMetaData(),
+//            //        rPi.getDhtFixedData(), rPi.getDhtVariableData(), rPi.getPmMetaData(), rPi.getPmVariableData());
+//            Log.d("MovementService", "All executed!");
+//        }
     }
 }
