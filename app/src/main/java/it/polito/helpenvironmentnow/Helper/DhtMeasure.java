@@ -1,6 +1,6 @@
 package it.polito.helpenvironmentnow.Helper;
 
-public class DhtMeasure {
+public class DhtMeasure implements Comparable<DhtMeasure> {
     private int timestamp;
     private double temperature;
     private double humidity;
@@ -35,5 +35,14 @@ public class DhtMeasure {
 
     public void setHumidity(double humidity) {
         this.humidity = humidity;
+    }
+
+    @Override
+    public int compareTo(DhtMeasure o) {
+        if(timestamp < o.timestamp)
+            return -1;
+        if(timestamp > o.timestamp)
+            return 1;
+        return 0;
     }
 }

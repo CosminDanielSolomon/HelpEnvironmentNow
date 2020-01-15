@@ -2,6 +2,7 @@ package it.polito.helpenvironmentnow.Helper;
 
 import java.util.List;
 
+// An object of this class is produced after a call to parseEnvironmentalData() of Parser class
 public class ParsedData {
     private int sensorIdTemperature;
     private int sensorIdHumidity;

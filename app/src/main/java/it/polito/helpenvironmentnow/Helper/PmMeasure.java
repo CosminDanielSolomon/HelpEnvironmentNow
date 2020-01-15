@@ -1,6 +1,6 @@
 package it.polito.helpenvironmentnow.Helper;
 
-public class PmMeasure {
+public class PmMeasure implements Comparable<PmMeasure> {
     private int timestamp;
     private int sensorId25;
     private int pm25;
@@ -55,5 +55,14 @@ public class PmMeasure {
 
     public void setPm10(int pm10) {
         this.pm10 = pm10;
+    }
+
+    @Override
+    public int compareTo(PmMeasure o) {
+        if(timestamp < o.timestamp)
+            return -1;
+        if(timestamp > o.timestamp)
+            return 1;
+        return 0;
     }
 }
