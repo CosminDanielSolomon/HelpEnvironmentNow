@@ -74,7 +74,7 @@ public class MovementService extends IntentService {
                 /* Send json object to the server */
                 Log.d("MovementService", "Network available!");
                 HeRestClient heRestClient = new HeRestClient(getApplicationContext());
-                heRestClient.sendToServer(dataBlock);
+                heRestClient.sendToServer(dataBlock, JsonTypes.MOVEMENT);
             } else {
                 /* Network is not available, I store it in local database and I enqueue a work that
                  * the Worker Manager will execute when network became available */
@@ -95,6 +95,7 @@ public class MovementService extends IntentService {
         Map<Integer, Position> positionsMap = new HashMap<>();
         for(Position p : positions)
             positionsMap.put(p.timestamp, p);
+        myDb.closeDb();
 
         return positionsMap;
     }

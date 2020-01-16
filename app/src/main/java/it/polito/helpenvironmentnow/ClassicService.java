@@ -73,7 +73,7 @@ public class ClassicService extends IntentService implements MyLocationListener 
                 /* Send json object to the server */
                 Log.d("ClassicService", "Network available!");
                 HeRestClient heRestClient = new HeRestClient(getApplicationContext());
-                heRestClient.sendToServer(dataBlock);
+                heRestClient.sendToServer(dataBlock, JsonTypes.CLASSIC);
             } else {
                 /* Network is not available, I store it in local database and I enqueue a work that
                  * the Worker Manager will execute when network became available */

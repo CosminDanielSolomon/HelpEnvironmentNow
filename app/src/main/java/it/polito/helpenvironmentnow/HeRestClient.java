@@ -16,13 +16,17 @@ import java.security.KeyStore;
 import cz.msebera.android.httpclient.Header;
 import cz.msebera.android.httpclient.entity.StringEntity;
 import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
+import it.polito.helpenvironmentnow.Storage.JsonTypes;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 
 public class HeRestClient {
 
-    private Context context;
-    private String ipAddress = "192.168.0.109";
+    // Server URL
+    private String ipAddress = "10.1.23.126";
     private String port = "8443";
+    private String HE_WEB_SERVICE_BASE_URL = "https://" + ipAddress + ":" + port + "/HelpEnvironment/helpenvironment/he";
+
+    private Context context;
     private SyncHttpClient restClient;
     private boolean sendResult;
 
@@ -31,13 +35,15 @@ public class HeRestClient {
         restClient = new SyncHttpClient();
         acceptAllCertificate();
         restClient.setBasicAuth("androidClient","a147_mx5:3");
+        restClient.setTimeout(60*1000);
         updateServerAddress(context);
     }
 
-    public void sendToServer(final JSONObject dataBlock) {
-        String HE_WEB_SERVICE_URL = "https://" + ipAddress + ":" + port + "/HelpEnvironment/helpenvironment/he/newdata";
+    public void sendToServer(final JSONObject dataBlock, final JsonTypes type) {
+
+        String END_URL = getUrlFromJsonType(type);
         StringEntity entity = new StringEntity(dataBlock.toString(), StandardCharsets.UTF_8);
-        restClient.put(context, HE_WEB_SERVICE_URL, entity, "application/json", new AsyncHttpResponseHandler() {
+        restClient.put(context, HE_WEB_SERVICE_BASE_URL + END_URL, entity, "application/json", new AsyncHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
                 Log.d("Client", "Service PUT SUCCESS:"+statusCode);
@@ -47,7 +53,7 @@ public class HeRestClient {
             public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
                 Log.d("Client", "Service PUT FAIL:"+statusCode);
                 MyDb myDb = new MyDb(context);
-                myDb.storeJsonObject(dataBlock);
+                myDb.storeJsonObject(dataBlock, type);
                 myDb.closeDb();
                 MyWorkerManager.enqueueNetworkWorker(context);
             }
@@ -60,9 +66,7 @@ public class HeRestClient {
         });
     }
 
-    public boolean sendToServerWithResult(final String dataBlock) {
-        String HE_WEB_SERVICE_URL = "https://" + ipAddress + ":" + port + "/HelpEnvironment/helpenvironment/he/newdata";
-        StringEntity entity = new StringEntity(dataBlock, StandardCharsets.UTF_8);
+    public boolean sendToServerWithResult(final String dataBlock, JsonTypes type) {
         AsyncHttpResponseHandler responseHandler = new AsyncHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
@@ -76,7 +80,9 @@ public class HeRestClient {
                 sendResult = false;
             }
         };
-        restClient.put(context, HE_WEB_SERVICE_URL, entity, "application/json", responseHandler);
+        StringEntity entity = new StringEntity(dataBlock, StandardCharsets.UTF_8);
+        String END_URL = getUrlFromJsonType(type);
+        restClient.put(context, HE_WEB_SERVICE_BASE_URL + END_URL , entity, "application/json", responseHandler);
 
         return sendResult;
     }
@@ -96,6 +102,19 @@ public class HeRestClient {
         }
     }
 
+    private String getUrlFromJsonType(JsonTypes type) {
+        String url = "";
+        if(type.equals(JsonTypes.CLASSIC))
+            url = "/newClassicData";
+        else if(type.equals(JsonTypes.MOVEMENT))
+            url = "/newMovementData";
+
+        return url;
+    }
+
+    // This method is only used for development purpose in order to allow the developer to change
+    // the ip and port of the remote server to connect to without changing the application code
+    // and re-compile it
     private void updateServerAddress(Context context) {
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.config_file), Context.MODE_PRIVATE);
         String IP_KEY = context.getString(R.string.IP_KEY);

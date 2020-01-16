@@ -11,6 +11,7 @@ import androidx.work.WorkerParameters;
 import java.util.Objects;
 
 import it.polito.helpenvironmentnow.HeRestClient;
+import it.polito.helpenvironmentnow.Storage.JsonTypes;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 import it.polito.helpenvironmentnow.Storage.StoredJson;
 
@@ -35,7 +36,7 @@ public class UploadWorker extends Worker {
         HeRestClient heRestClient = new HeRestClient(context);
         for(StoredJson storedJson : myDb.getAllStoredJson()) {
             Log.d("SensorUpload","id " + storedJson.id);
-            sendResult = heRestClient.sendToServerWithResult(storedJson.jsonSave);
+            sendResult = heRestClient.sendToServerWithResult(storedJson.jsonSave, getJsonTypes(storedJson.type));
             if(!sendResult) {
                 Objects.requireNonNull(Looper.myLooper()).quit();
                 myDb.closeDb();
@@ -46,5 +47,11 @@ public class UploadWorker extends Worker {
         Objects.requireNonNull(Looper.myLooper()).quit();
         myDb.closeDb();
         return Result.success();
+    }
+
+    private JsonTypes getJsonTypes(String type) {
+        if(type.equals(JsonTypes.CLASSIC.getType()))
+            return JsonTypes.CLASSIC;
+        return JsonTypes.MOVEMENT;
     }
 }
