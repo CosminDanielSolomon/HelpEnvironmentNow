@@ -14,6 +14,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 
 import it.polito.helpenvironmentnow.Storage.JsonTypes;
 import it.polito.helpenvironmentnow.Storage.MyDb;
@@ -24,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
     private String TAG = "AppHelpNow";
     private static final int PERMISSION_REQUEST_FINE_LOCATION = 1;
     private Button btnConfig, btnMode;
+    private Switch switchMovementMode;
     private boolean movementMode;
     private SharedPreferences sharedPref;
 
@@ -42,6 +45,14 @@ public class MainActivity extends AppCompatActivity {
 
         sharedPref = getSharedPreferences(getString(R.string.config_file), Context.MODE_PRIVATE);
         movementMode = sharedPref.getBoolean(getString(R.string.MODE), false);
+        switchMovementMode = findViewById(R.id.switchMovementMode);
+        switchMovementMode.setChecked(movementMode);
+        switchMovementMode.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+            }
+        });
         btnMode = findViewById(R.id.buttonStartStopTracking);
         btnMode.setOnClickListener(new View.OnClickListener() {
             @Override
