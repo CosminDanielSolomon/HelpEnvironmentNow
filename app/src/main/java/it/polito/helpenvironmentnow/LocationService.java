@@ -57,12 +57,9 @@ public class LocationService extends Service {
             locationRequest.setFastestInterval(1000);
             locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
             locationRequest.setMaxWaitTime(5000);
-            locationClient = LocationServices.
-                    getFusedLocationProviderClient(getApplicationContext());
+            locationClient = LocationServices.getFusedLocationProviderClient(getApplicationContext());
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (getApplicationContext().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                        != PackageManager.PERMISSION_GRANTED
-                        && getApplicationContext().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
                         != PackageManager.PERMISSION_GRANTED) {
                     return;
                 }
@@ -89,10 +86,9 @@ public class LocationService extends Service {
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 if (locationResult == null) {
-                    Log.d(TAG, "location result is NULL");
                     return;
                 }
-                Log.d(TAG, "Number:" + locationResult.getLocations().size());
+
                 for (Location location : locationResult.getLocations()) {
                     int timestamp =  ((Long)TimeUnit.MILLISECONDS.toSeconds(location.getTime())).intValue();
                     Log.d(TAG, "t:" + timestamp + " lat:" + location.getLatitude() + " long:"

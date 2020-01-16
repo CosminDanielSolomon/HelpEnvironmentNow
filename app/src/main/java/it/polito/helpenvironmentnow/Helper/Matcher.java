@@ -1,7 +1,6 @@
 package it.polito.helpenvironmentnow.Helper;
 
 import android.location.Location;
-import android.util.Log;
 
 import com.fonfon.geohash.GeoHash;
 
@@ -79,7 +78,6 @@ public class Matcher {
 
             // EXACT MATCH
             matchedTimestamp = currentTimestamp;
-            Log.d("MATCHER", "exact MATCH: " + matchedTimestamp);
 
         } else {
 
@@ -99,7 +97,7 @@ public class Matcher {
                     gap++;
                 }
             }
-            Log.d("MATCHER", "NOT exact MATCH " + currentTimestamp + "M " + matchedTimestamp);
+
         }
 
         return matchedTimestamp;
