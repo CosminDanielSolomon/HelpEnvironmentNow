@@ -24,8 +24,11 @@ import org.altbeacon.beacon.startup.RegionBootstrap;
 import java.util.Collection;
 import java.util.concurrent.Executors;
 
+// To better understand the callbacks of this class search for "Android beacon library background detection"
+// Useful link: https://altbeacon.github.io/android-beacon-library/background_launching.html
 public class ApplicationHelpEnvironmentNow extends Application implements BootstrapNotifier, RangeNotifier, Configuration.Provider {
-    private static final String TAG = "AppHelpNow";
+
+    private static final String TAG = "AppHelpNow"; // This string is used as tag for debug
     private static final String namespaceId = "0xa8844da2d40a11e9bb65";
     private static final String instanceId = "0x2a2ae2dbcce4";
     private RegionBootstrap regionBootstrap;
@@ -39,12 +42,11 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
         Log.d(TAG, "App started up");
         initializeMovementMode();
         beaconManager = BeaconManager.getInstanceForApplication(this);
+        beaconManager.setRegionStatePersistenceEnabled(false);
         // To detect proprietary beacons, you must add a line like below corresponding to your beacon
         // type.  Do a web search for "setBeaconLayout" to get the proper expression.
-        beaconManager.setRegionStatePersistenceEnabled(false);
-        beaconManager.getBeaconParsers().add(new BeaconParser().
-                setBeaconLayout(BeaconParser.EDDYSTONE_UID_LAYOUT));
-        // wake up the app when any beacon is seen (you can specify specific id filers in the parameters below)
+        beaconManager.getBeaconParsers().add(new BeaconParser().setBeaconLayout(BeaconParser.EDDYSTONE_UID_LAYOUT));
+        // wake up the app when any beacon is seen (you can specify specific id filters in the parameters below)
         myBeaconNamespaceId = Identifier.parse(namespaceId);
         myBeaconInstanceId = Identifier.parse(instanceId);
         region = new Region("it.polito.helpenvironmentnow.boostrapRegion", myBeaconNamespaceId, myBeaconInstanceId, null);
@@ -61,14 +63,7 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
-        }/* else {
-            try {
-                beaconManager.stopRangingBeaconsInRegion(region);
-                Log.d(TAG, "stop RANGING beacons in region");
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-        }*/
+        }
     }
 
     @Override
@@ -77,13 +72,6 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
         // This call to disable will make it so the activity below only gets launched the first time a beacon is seen (until the next time the app is launched)
         // if you want the Activity to launch every single time beacons come into view, remove this call.
         //regionBootstrap.disable();
-
-        //Intent intent = new Intent(this, MainActivity.class);
-        // IMPORTANT: in the AndroidManifest.xml definition of this activity, you must set android:launchMode="singleInstance" or you will get two instances
-        // created when a user launches the activity manually and it gets launched from here.
-        //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        //Log.d(TAG, "didEnterRegion Launching activity");
-        //this.startActivity(intent);
     }
 
     @Override

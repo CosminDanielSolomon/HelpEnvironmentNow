@@ -7,9 +7,7 @@
     <string name="PORT_DEF"></string>
     <string name="MODE">mode</string>
     <string name="movement_mode">Movement mode</string>
-    <string name="movement_mode_body">Movement mode has to be activated before starting up your own
-        Raspberry Pi. After you activate this mode, always keep your Raspberry Pi and smartphone
-        close together. If you don't have your configured Raspberry Pi don't consider this mode.</string>
-    <string name="body_message">Keep your Bluetooth ON in order to help environment. This app works in background, gets environmental data from monitoring devices around the city and sends it to remote server, so you have to do nothing.</string>
+    <string name="movement_mode_body">Movement mode has to be activated before starting up your own Raspberry Pi. After you activate this mode, always keep your Raspberry Pi and smartphone close together. If you don\'t have your configured Raspberry Pi don\'t consider this mode.</string>
+    <string name="body_message">Keep your Bluetooth ON in order to help environment. This app works in background, gets environmental data from monitoring devices around the city and sends it to a remote server, so you have to do nothing.</string>
 
 </resources>

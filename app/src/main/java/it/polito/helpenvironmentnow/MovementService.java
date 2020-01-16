@@ -46,15 +46,6 @@ public class MovementService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        // TODO remove
-//        MyDb myDb = new MyDb(getApplicationContext());
-//        Position[] positions = myDb.selectPositions(1579089600, 1579096800);
-//        for(Position p : positions) {
-//            Log.d("TEST", p.timestamp + " lat:" + p.latitude + " lon:" + p.longitude + " alt:" + p.altitude);
-//        }
-//        myDb.closeDb();
-        // TODO remove
-
         /* the remote device is the the Raspberry Pi */
         String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
         RaspberryPi rPi = new RaspberryPi();
@@ -84,7 +75,7 @@ public class MovementService extends IntentService {
                 myDb.closeDb();
                 MyWorkerManager.enqueueNetworkWorker(getApplicationContext());
             }
-            Log.d("MovementService", "All executed!");
+            Log.d("MovementService", "Service completed!");
         }
     }
 

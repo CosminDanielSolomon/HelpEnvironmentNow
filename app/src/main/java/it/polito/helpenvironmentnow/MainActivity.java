@@ -6,27 +6,28 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
-import androidx.core.content.ContextCompat;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.RelativeLayout;
 import android.widget.Switch;
 
-import it.polito.helpenvironmentnow.Storage.JsonTypes;
-import it.polito.helpenvironmentnow.Storage.MyDb;
-import it.polito.helpenvironmentnow.Storage.Position;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 public class MainActivity extends AppCompatActivity {
 
-    private String TAG = "AppHelpNow";
+    private String TAG = "MainActivity"; // This string is used as tag for debug
+
     private static final int PERMISSION_REQUEST_FINE_LOCATION = 1;
-    private Button btnConfig, btnMode;
+    private RelativeLayout movementRelativeLayout;
     private Switch switchMovementMode;
+    private Button btnConfig;
     private boolean movementMode;
     private SharedPreferences sharedPref;
 
@@ -34,6 +35,32 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        movementRelativeLayout = findViewById(R.id.movementRelativeLayout);
+        sharedPref = getSharedPreferences(getString(R.string.config_file), Context.MODE_PRIVATE);
+        movementMode = sharedPref.getBoolean(getString(R.string.MODE), false);
+        switchMovementMode = findViewById(R.id.switchMovementMode);
+        switchMovementMode.setChecked(movementMode);
+        setMovementRelativeLayoutBackground(movementMode);
+        switchMovementMode.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if(isChecked) {
+                    Intent intent = new Intent(getApplicationContext(), LocationService.class);
+                    ContextCompat.startForegroundService(getApplicationContext(), intent);
+                    movementMode = true;
+                } else {
+                    Intent intent = new Intent(getApplicationContext(), LocationService.class);
+                    stopService(intent);
+                    movementMode = false;
+                }
+                setMovementRelativeLayoutBackground(movementMode);
+                SharedPreferences.Editor editor = sharedPref.edit();
+                editor.putBoolean(getString(R.string.MODE), movementMode);
+                editor.commit();
+            }
+        });
+
         btnConfig = findViewById(R.id.buttonConfig);
         btnConfig.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -43,38 +70,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        sharedPref = getSharedPreferences(getString(R.string.config_file), Context.MODE_PRIVATE);
-        movementMode = sharedPref.getBoolean(getString(R.string.MODE), false);
-        switchMovementMode = findViewById(R.id.switchMovementMode);
-        switchMovementMode.setChecked(movementMode);
-        switchMovementMode.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
-            }
-        });
-        btnMode = findViewById(R.id.buttonStartStopTracking);
-        btnMode.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(movementMode) {
-                    Log.d(TAG, "movementMode TRUE; stopService...");
-                    Intent intent = new Intent(getApplicationContext(), LocationService.class);
-                    stopService(intent);
-                    movementMode = false;
-                    Log.d(TAG, "movementMode set to FALSE; stopService performed");
-                } else {
-                    Log.d(TAG, "movementMode FALSE; startService...");
-                    Intent intent = new Intent(getApplicationContext(), LocationService.class);
-                    ContextCompat.startForegroundService(getApplicationContext(), intent);
-                    movementMode = true;
-                    Log.d(TAG, "movementMode set to TRUE; startService performed");
-                }
-                SharedPreferences.Editor editor = sharedPref.edit();
-                editor.putBoolean(getString(R.string.MODE), movementMode);
-                editor.commit();
-            }
-        });
         /* TODO remove this part */
         Button btnConnect = findViewById(R.id.buttonConnect);
         btnConnect.setOnClickListener(new View.OnClickListener() {
@@ -83,10 +78,15 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(getApplicationContext(), MovementService.class);
                 intent.putExtra("remoteMacAddress", "B8:27:EB:C4:15:D6");
                 ContextCompat.startForegroundService(getApplicationContext(), intent);
-                Log.d(TAG, "Activity startService(...) performed");
+                Log.d(TAG, "startService(...) performed");
             }
         });
         /* TODO remove this part */
+
+        requestFineLocationPermission();
+    }
+
+    private void requestFineLocationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             // Android M Permission check 
             if (this.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -109,7 +109,7 @@ public class MainActivity extends AppCompatActivity {
         switch (requestCode) {
             case PERMISSION_REQUEST_FINE_LOCATION: {
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Log.d(TAG, "coarse location permission granted");
+                    Log.d(TAG, "location permission granted");
                 } else {
                     final AlertDialog.Builder builder = new AlertDialog.Builder(this);
                     builder.setTitle("Functionality limited");
@@ -127,5 +127,13 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
         }
+    }
+
+    // Sets the background colour of the Movement mode layout
+    private void setMovementRelativeLayoutBackground(boolean state) {
+        if(state)
+            movementRelativeLayout.setBackgroundColor(Color.parseColor("#068DE5"));
+        else
+            movementRelativeLayout.setBackgroundColor(Color.parseColor("#9E9E9E"));
     }
 }

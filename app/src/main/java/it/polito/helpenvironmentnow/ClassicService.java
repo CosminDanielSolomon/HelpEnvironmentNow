@@ -57,7 +57,6 @@ public class ClassicService extends IntentService implements MyLocationListener 
             * is called and sets curLocationReady to true and so the while cycle will be interrupted
             * and the field curLocation will contain latitude, longitude, altitude */
             while(!curLocationReady) {
-                Log.d("ClassicService", "Inside wait while...");
                 int WAIT_LOCATION_MS = 1000;
                 SystemClock.sleep(WAIT_LOCATION_MS);
             }
@@ -83,7 +82,7 @@ public class ClassicService extends IntentService implements MyLocationListener 
                 myDb.closeDb();
                 MyWorkerManager.enqueueNetworkWorker(getApplicationContext());
             }
-            Log.d("ClassicService", "All executed!");
+            Log.d("ClassicService", "Service Completed");
         }
     }
 
@@ -91,6 +90,5 @@ public class ClassicService extends IntentService implements MyLocationListener 
     public void locationCompleted(Location location) {
         curLocation = location;
         curLocationReady = true;
-        Log.d("ClassicService", "lat" + location.getLatitude()+"long"+location.getLongitude()+"alt"+location.getAltitude());
     }
 }
