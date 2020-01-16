@@ -95,6 +95,8 @@ public class MovementService extends IntentService {
         Map<Integer, Position> positionsMap = new HashMap<>();
         for(Position p : positions)
             positionsMap.put(p.timestamp, p);
+        // I delete all the positions that I extract because I don't need them in the future
+        myDb.deletePositions(timestamps[1]);
         myDb.closeDb();
 
         return positionsMap;
