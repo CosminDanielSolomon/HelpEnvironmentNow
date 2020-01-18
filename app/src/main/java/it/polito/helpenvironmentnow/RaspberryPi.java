@@ -188,7 +188,7 @@ public class RaspberryPi {
                 matcher.matchMeasuresAndPositions(loc, parsedMeasures, myDb);
                 // I save measures into local database
                 myDb.insertMeasures(parsedMeasures);
-                totalInsertions += n*2;
+                totalInsertions += n * 2;
             } else {
                 result = -1;
             }
@@ -233,6 +233,7 @@ public class RaspberryPi {
                                    Location loc, MyDb myDb) throws IOException {
 
         Parser parser = new Parser();
+        Matcher matcher = new Matcher();
 
         final int N_MEASURES = 8000; // max measures to receive in one cycle, before parse them
         int measureLength = pmMetaData.getReadLength(); // is the measure length
@@ -240,7 +241,6 @@ public class RaspberryPi {
         byte[] data = new byte[BUFFER_SIZE];
 
         int totalMeasures = pmMetaData.getNumberOfReads();
-        Log.d(TAG, "PM:"+ totalMeasures +"measures");
         int currentMeasures = 0, size, result = 0;
         int n = N_MEASURES;
         while(currentMeasures < totalMeasures && result != -1) {
@@ -254,9 +254,11 @@ public class RaspberryPi {
                 currentMeasures += n;
 
                 List<Measure> parsedMeasures = parser.parsePmData(data, n, pmMetaData);
-               // TODO match
+                // I assign position to each measure
+                matcher.matchMeasuresAndPositions(loc, parsedMeasures, myDb);
+                // I save measures into local database
                 myDb.insertMeasures(parsedMeasures);
-                totalInsertions += n*2;
+                totalInsertions += n * 2;
             } else {
                 result = -1;
             }

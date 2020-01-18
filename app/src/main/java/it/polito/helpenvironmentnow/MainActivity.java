@@ -75,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
         btnConnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(getApplicationContext(), ClassicService.class);
+                Intent intent = new Intent(getApplicationContext(), MovementService.class);
                 intent.putExtra("remoteMacAddress", "B8:27:EB:C4:15:D6");
                 ContextCompat.startForegroundService(getApplicationContext(), intent);
                 Log.d(TAG, "startService(...) performed");
