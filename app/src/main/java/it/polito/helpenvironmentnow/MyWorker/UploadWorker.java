@@ -8,14 +8,18 @@ import androidx.annotation.NonNull;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
+import org.json.JSONObject;
+
+import java.util.List;
 import java.util.Objects;
 
 import it.polito.helpenvironmentnow.HeRestClient;
-import it.polito.helpenvironmentnow.Storage.JsonTypes;
+import it.polito.helpenvironmentnow.Helper.JsonBuilder;
+import it.polito.helpenvironmentnow.Storage.Measure;
 import it.polito.helpenvironmentnow.Storage.MyDb;
-import it.polito.helpenvironmentnow.Storage.StoredJson;
 
 public class UploadWorker extends Worker {
+    private String TAG = "NetworkWorker";
     private Context context;
 
     public UploadWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
@@ -26,32 +30,42 @@ public class UploadWorker extends Worker {
     @NonNull
     @Override
     public Result doWork() {
-        Log.d("SensorUpload", "doWork() called");
+        Log.d(TAG, "doWork() called");
         boolean sendResult;
         if(Looper.myLooper() == null) {
-            Log.d("SensorUpload", "Looper prepare called");
+            Log.d(TAG, "Looper prepare called");
             Looper.prepare();
         }
         MyDb myDb = new MyDb(context);
+        JsonBuilder jsonBuilder = new JsonBuilder();
         HeRestClient heRestClient = new HeRestClient(context);
-        for(StoredJson storedJson : myDb.getAllStoredJson()) {
-            Log.d("SensorUpload","id " + storedJson.id);
-            sendResult = heRestClient.sendToServerWithResult(storedJson.jsonSave, getJsonTypes(storedJson.type));
-            if(!sendResult) {
-                Objects.requireNonNull(Looper.myLooper()).quit();
-                myDb.closeDb();
+
+        long currentMeasures = 0;
+        long totMeasures = myDb.getTotalMeasures();
+
+        while(currentMeasures < totMeasures) {
+            List<Measure> measures = myDb.getSomeMeasures();
+
+            JSONObject jsonObject = jsonBuilder.buildDataBlock(measures);
+            if(jsonObject == null) {
+                releaseResources(myDb);
                 return Result.retry();
             }
-            myDb.deleteJsonObject(storedJson);
+            sendResult = heRestClient.sendToServerWithResult(jsonObject.toString());
+            if(!sendResult) {
+                releaseResources(myDb);
+                return Result.retry();
+            }
+            myDb.deleteMeasures(measures);
+            currentMeasures += measures.size();
         }
-        Objects.requireNonNull(Looper.myLooper()).quit();
-        myDb.closeDb();
+
+        releaseResources(myDb);
         return Result.success();
     }
 
-    private JsonTypes getJsonTypes(String type) {
-        if(type.equals(JsonTypes.CLASSIC.getType()))
-            return JsonTypes.CLASSIC;
-        return JsonTypes.MOVEMENT;
+    public void releaseResources(MyDb myDb) {
+        Objects.requireNonNull(Looper.myLooper()).quit();
+        myDb.closeDb();
     }
 }

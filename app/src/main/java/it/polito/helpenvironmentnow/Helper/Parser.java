@@ -6,42 +6,42 @@ import java.util.List;
 
 // This class is used to parse the stream of bytes received from the Raspberry Pi
 public class Parser {
-    public ParsedData parseEnvironmentalData(DhtMetaData dhtMetaData, byte[] fixedSensorsData,
-                                             byte[] dhtVariableData, PmMetaData pmMetaData, byte[] pmVariableData) {
-        int dhtReads = dhtMetaData.getNumberOfReads();
-        int dhtReadLength = dhtMetaData.getReadLength();
-        int dhtTimestampLength = dhtMetaData.getTimestampLength();
-        int temperatureLength = dhtMetaData.getTemperatureLength();
-        int humidityLength = dhtMetaData.getHumidityLength();
-        int dhtSensorIdLength = dhtMetaData.getSensorIdLength();
+//    public ParsedData parseEnvironmentalData(DhtMetaData dhtMetaData, byte[] fixedSensorsData,
+//                                             byte[] dhtVariableData, PmMetaData pmMetaData, byte[] pmVariableData) {
+//        int dhtReads = dhtMetaData.getNumberOfReads();
+//        int dhtReadLength = dhtMetaData.getReadLength();
+//        int dhtTimestampLength = dhtMetaData.getTimestampLength();
+//        int temperatureLength = dhtMetaData.getTemperatureLength();
+//        int humidityLength = dhtMetaData.getHumidityLength();
+//        int dhtSensorIdLength = dhtMetaData.getSensorIdLength();
+//
+//        int pmReads = pmMetaData.getNumberOfReads();
+//        int pmReadLength = pmMetaData.getReadLength();
+//        int pmValueLength =  pmMetaData.getPmValueLength();
+//        int pmTimestampLength = pmMetaData.getTimestampLength();
+//        int pmSensorIdLength = pmMetaData.getSensorIdLength();
+//
+//        int sensorIdTemperature = parseSensorIdTemperature(fixedSensorsData, dhtSensorIdLength);
+//        int sensorIdHumidity = parseSensorIdHumidity(fixedSensorsData, dhtSensorIdLength);
+//        List<DhtMeasure> dhtMeasures = parseDhtData(dhtVariableData, dhtReads, dhtReadLength, dhtTimestampLength, temperatureLength, humidityLength);
+//        List<PmMeasure> pmMeasures = parsePmData(pmVariableData, pmReads, pmReadLength, pmTimestampLength, pmValueLength, pmSensorIdLength);
+//
+//        return new ParsedData(sensorIdTemperature, sensorIdHumidity, dhtMeasures, pmMeasures);
+//    }
 
-        int pmReads = pmMetaData.getNumberOfReads();
-        int pmReadLength = pmMetaData.getReadLength();
-        int pmValueLength =  pmMetaData.getPmValueLength();
-        int pmTimestampLength = pmMetaData.getTimestampLength();
-        int pmSensorIdLength = pmMetaData.getSensorIdLength();
-
-        int sensorIdTemperature = parseSensorIdTemperature(fixedSensorsData, dhtSensorIdLength);
-        int sensorIdHumidity = parseSensorIdHumidity(fixedSensorsData, dhtSensorIdLength);
-        List<DhtMeasure> dhtMeasures = parseDhtData(dhtVariableData, dhtReads, dhtReadLength, dhtTimestampLength, temperatureLength, humidityLength);
-        List<PmMeasure> pmMeasures = parsePmData(pmVariableData, pmReads, pmReadLength, pmTimestampLength, pmValueLength, pmSensorIdLength);
-
-        return new ParsedData(sensorIdTemperature, sensorIdHumidity, dhtMeasures, pmMeasures);
-    }
-
-    private int parseSensorIdTemperature(byte[] fixedSensorsData, int sensorIdLength) {
-        String strTempId = new String(fixedSensorsData, 0, sensorIdLength, StandardCharsets.UTF_8);
+    public int parseSensorIdTemperature(byte[] fixedDhtData, int sensorIdLength) {
+        String strTempId = new String(fixedDhtData, 0, sensorIdLength, StandardCharsets.UTF_8);
         int sensorIdTemperature = Integer.parseInt(strTempId);
         return sensorIdTemperature;
     }
 
-    private int parseSensorIdHumidity(byte[] fixedSensorsData, int sensorIdLength) {
-        String strHumId = new String(fixedSensorsData, sensorIdLength, sensorIdLength, StandardCharsets.UTF_8);
+    public int parseSensorIdHumidity(byte[] fixedDhtData, int sensorIdLength) {
+        String strHumId = new String(fixedDhtData, sensorIdLength, sensorIdLength, StandardCharsets.UTF_8);
         int sensorIdHumidity = Integer.parseInt(strHumId);
         return sensorIdHumidity;
     }
 
-    private List<DhtMeasure> parseDhtData(byte[] dhtData, int dhtReads, int dhtReadLength, int timestampLength,
+    public List<DhtMeasure> parseDhtData(byte[] dhtData, int dhtReads, int dhtReadLength, int timestampLength,
                                           int temperatureLength, int humidityLength) {
         String strMessage;
         int offset;
@@ -62,7 +62,7 @@ public class Parser {
         return dhtMeasures;
     }
 
-    private List<PmMeasure> parsePmData(byte[] pmData, int pmReads, int pmReadLength, int timestampLength,
+    public List<PmMeasure> parsePmData(byte[] pmData, int pmReads, int pmReadLength, int timestampLength,
                                         int pmValueLength, int sensorIdLength) {
         String strMessage;
         int offset;

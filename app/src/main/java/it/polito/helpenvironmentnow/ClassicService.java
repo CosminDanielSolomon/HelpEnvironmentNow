@@ -18,7 +18,6 @@ import it.polito.helpenvironmentnow.Helper.ParsedData;
 import it.polito.helpenvironmentnow.Helper.Parser;
 import it.polito.helpenvironmentnow.Helper.ServiceNotification;
 import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
-import it.polito.helpenvironmentnow.Storage.JsonTypes;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 
 public class ClassicService extends IntentService implements MyLocationListener {
@@ -46,44 +45,31 @@ public class ClassicService extends IntentService implements MyLocationListener 
 
     @Override
     protected void onHandleIntent(Intent intent) {
+
+        /* readResult = true -> Data has been read correctly from Raspberry Pi */
+        LocationInfo.getCurrentLocation(getApplicationContext(), this);
+        /* Wait until the device current location is returned. When location is ready, locationCompleted(...)
+         * is called and sets curLocationReady to true and so the while cycle will be interrupted
+         * and the field curLocation will contain latitude, longitude, altitude */
+        while(!curLocationReady) {
+            int WAIT_LOCATION_MS = 500;
+            SystemClock.sleep(WAIT_LOCATION_MS);
+        }
+
+        // Open the db connection. It will be used inside Raspberry Pi object
+        MyDb myDb = new MyDb(getApplicationContext());
+
         /* the remote device is the the Raspberry Pi */
         String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
         RaspberryPi rPi = new RaspberryPi();
-        boolean readResult = rPi.connectAndRead(remoteDeviceMacAddress);
-        if(readResult) {
-            /* readResult = true -> Data has been read correctly from Raspberry Pi */
-            LocationInfo.getCurrentLocation(getApplicationContext(), this);
-            /* Wait until the device current location is returned. When location is ready, locationCompleted(...)
-            * is called and sets curLocationReady to true and so the while cycle will be interrupted
-            * and the field curLocation will contain latitude, longitude, altitude */
-            while(!curLocationReady) {
-                int WAIT_LOCATION_MS = 1000;
-                SystemClock.sleep(WAIT_LOCATION_MS);
-            }
-
-            /* Build the json object filling it with data from Raspberry Pi and location data */
-            Parser parser = new Parser();
-            ParsedData parsedData = parser.parseEnvironmentalData(rPi.getDhtMetaData(),
-                    rPi.getDhtFixedData(), rPi.getDhtVariableData(), rPi.getPmMetaData(), rPi.getPmVariableData());
-            JsonBuilder jsonBuilder = new JsonBuilder();
-            JSONObject dataBlock = jsonBuilder.buildClassicJson(curLocation, parsedData);
-
-            if(NetworkInfo.isNetworkAvailable(this)) {
-                /* Send json object to the server */
-                Log.d("ClassicService", "Network available!");
-                HeRestClient heRestClient = new HeRestClient(getApplicationContext());
-                heRestClient.sendToServer(dataBlock, JsonTypes.CLASSIC);
-            } else {
-                /* Network is not available, I store it in local database and I enqueue a work that
-                 * the Worker Manager will execute when network became available */
-                Log.d("ClassicService", "Network NOT available!");
-                MyDb myDb = new MyDb(getApplicationContext());
-                myDb.storeJsonObject(dataBlock, JsonTypes.CLASSIC);
-                myDb.closeDb();
-                MyWorkerManager.enqueueNetworkWorker(getApplicationContext());
-            }
-            Log.d("ClassicService", "Service Completed");
+        long insertions = rPi.connectAndRead(remoteDeviceMacAddress, curLocation, myDb);
+        // Close the db connection as it is not used anymore
+        myDb.closeDb();
+        if(insertions > 0) {
+            /* I enqueue a work that the Worker Manager will execute when network became available */
+            MyWorkerManager.enqueueNetworkWorker(getApplicationContext());
         }
+        Log.d("ClassicService", "Service Completed");
     }
 
     @Override

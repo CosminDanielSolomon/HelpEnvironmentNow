@@ -8,6 +8,7 @@ import android.location.LocationManager;
 import android.os.Build;
 import android.util.Log;
 
+import com.fonfon.geohash.GeoHash;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -43,5 +44,11 @@ public class LocationInfo {
                 }
             }
         });
+    }
+
+    public static String encodeLocation(Location location) {
+        final int numberOfChars = 12; // the same size as the corresponding remote database field - varchar(12)
+        GeoHash hash = GeoHash.fromLocation(location, numberOfChars);
+        return hash.toString();
     }
 }

@@ -16,7 +16,6 @@ import java.security.KeyStore;
 import cz.msebera.android.httpclient.Header;
 import cz.msebera.android.httpclient.entity.StringEntity;
 import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
-import it.polito.helpenvironmentnow.Storage.JsonTypes;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 
 public class HeRestClient {
@@ -24,7 +23,7 @@ public class HeRestClient {
     // Server URL
     private String ipAddress = "10.1.23.126";
     private String port = "8443";
-    private String HE_WEB_SERVICE_BASE_URL = "https://" + ipAddress + ":" + port + "/HelpEnvironment/helpenvironment/he";
+    private String HE_WEB_SERVICE_URL = "https://" + ipAddress + ":" + port + "/HelpEnvironment/helpenvironment/he/measures";
 
     private Context context;
     private SyncHttpClient restClient;
@@ -35,15 +34,15 @@ public class HeRestClient {
         restClient = new SyncHttpClient();
         acceptAllCertificate();
         restClient.setBasicAuth("androidClient","a147_mx5:3");
-        restClient.setTimeout(60*1000);
+        //restClient.setTimeout(60*1000);
+        restClient.setResponseTimeout(3600*1000);
         updateServerAddress(context);
     }
 
-    public void sendToServer(final JSONObject dataBlock, final JsonTypes type) {
+    /*public void sendToServer(final JSONObject dataBlock) {
 
-        String END_URL = getUrlFromJsonType(type);
         StringEntity entity = new StringEntity(dataBlock.toString(), StandardCharsets.UTF_8);
-        restClient.put(context, HE_WEB_SERVICE_BASE_URL + END_URL, entity, "application/json", new AsyncHttpResponseHandler() {
+        restClient.put(context, HE_WEB_SERVICE_URL, entity, "application/json", new AsyncHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
                 Log.d("Client", "Service PUT SUCCESS:"+statusCode);
@@ -64,9 +63,9 @@ public class HeRestClient {
                 Log.d("AppHelpEnv", "Retrychiamato");
             }
         });
-    }
+    }*/
 
-    public boolean sendToServerWithResult(final String dataBlock, JsonTypes type) {
+    public boolean sendToServerWithResult(final String dataBlock) {
         AsyncHttpResponseHandler responseHandler = new AsyncHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
@@ -81,8 +80,7 @@ public class HeRestClient {
             }
         };
         StringEntity entity = new StringEntity(dataBlock, StandardCharsets.UTF_8);
-        String END_URL = getUrlFromJsonType(type);
-        restClient.put(context, HE_WEB_SERVICE_BASE_URL + END_URL , entity, "application/json", responseHandler);
+        restClient.put(context, HE_WEB_SERVICE_URL, entity, "application/json", responseHandler);
 
         return sendResult;
     }
@@ -100,16 +98,6 @@ public class HeRestClient {
             socketFactory.setHostnameVerifier(MySSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
             restClient.setSSLSocketFactory(socketFactory);
         }
-    }
-
-    private String getUrlFromJsonType(JsonTypes type) {
-        String url = "";
-        if(type.equals(JsonTypes.CLASSIC))
-            url = "/newClassicData";
-        else if(type.equals(JsonTypes.MOVEMENT))
-            url = "/newMovementData";
-
-        return url;
     }
 
     // This method is only used for development purpose in order to allow the developer to change

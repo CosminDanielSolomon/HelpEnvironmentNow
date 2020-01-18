@@ -20,7 +20,6 @@ import it.polito.helpenvironmentnow.Helper.ParsedData;
 import it.polito.helpenvironmentnow.Helper.Parser;
 import it.polito.helpenvironmentnow.Helper.ServiceNotification;
 import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
-import it.polito.helpenvironmentnow.Storage.JsonTypes;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 import it.polito.helpenvironmentnow.Storage.Position;
 
@@ -46,66 +45,56 @@ public class MovementService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
+
+        // Open the db connection. It will be used inside Raspberry Pi object
+        MyDb myDb = new MyDb(getApplicationContext());
+
         /* the remote device is the the Raspberry Pi */
         String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
         RaspberryPi rPi = new RaspberryPi();
-        boolean readResult = rPi.connectAndRead(remoteDeviceMacAddress);
-        if(readResult) {
-            /* readResult = true -> Data has been read correctly from Raspberry Pi */
-            Parser parser = new Parser();
-            ParsedData parsedData = parser.parseEnvironmentalData(rPi.getDhtMetaData(),
-                rPi.getDhtFixedData(), rPi.getDhtVariableData(), rPi.getPmMetaData(), rPi.getPmVariableData());
-            Map<Integer, Position> positionsMap = getMapOfPositions(parsedData);
-            Matcher matcher = new Matcher();
-            MatchedData matchedData = matcher.matchMeasuresAndPositions(parsedData, positionsMap);
-            /* Build the json object filling it with data from Raspberry Pi and location data */
-            JsonBuilder jsonBuilder = new JsonBuilder();
-            JSONObject dataBlock = jsonBuilder.buildMovementJson(matchedData);
-            if(NetworkInfo.isNetworkAvailable(this)) {
-                /* Send json object to the server */
-                Log.d("MovementService", "Network available!");
-                HeRestClient heRestClient = new HeRestClient(getApplicationContext());
-                heRestClient.sendToServer(dataBlock, JsonTypes.MOVEMENT);
-            } else {
-                /* Network is not available, I store it in local database and I enqueue a work that
-                 * the Worker Manager will execute when network became available */
-                Log.d("MovementService", "Network NOT available!");
-                MyDb myDb = new MyDb(getApplicationContext());
-                myDb.storeJsonObject(dataBlock, JsonTypes.MOVEMENT);
-                myDb.closeDb();
-                MyWorkerManager.enqueueNetworkWorker(getApplicationContext());
-            }
-            Log.d("MovementService", "Service completed!");
-        }
-    }
-
-    private Map<Integer, Position> getMapOfPositions(ParsedData parsedData) {
-        int[] timestamps = getMinMaxTimestamp(parsedData);
-        MyDb myDb = new MyDb(getApplicationContext());
-        Position[] positions = myDb.selectPositions(timestamps[0], timestamps[1]);
-        Map<Integer, Position> positionsMap = new HashMap<>();
-        for(Position p : positions)
-            positionsMap.put(p.timestamp, p);
-        // I delete all the positions that I extract because I don't need them in the future
-        myDb.deletePositions(timestamps[1]);
+        long insertions = rPi.connectAndRead(remoteDeviceMacAddress, null, myDb);
+        // Close the db connection as it is not used anymore
         myDb.closeDb();
+        if(insertions > 0) {
+            /* I enqueue a work that the Worker Manager will execute when network became available */
+            MyWorkerManager.enqueueNetworkWorker(getApplicationContext());
+            Log.d("ClassicService", "Service Completed");
+        }
 
-        return positionsMap;
+        Log.d("MovementService", "Service completed!");
+
+//        Map<Integer, Position> positionsMap = getMapOfPositions(parsedData);
+//        Matcher matcher = new Matcher();
+//        MatchedData matchedData = matcher.matchMeasuresAndPositions(parsedData, positionsMap);
     }
 
-    // Gets the min and max timestamp from the received environmental data
-    // min and max timestamps are then used to extract locations from local db to match them together
-    private int[] getMinMaxTimestamp(ParsedData parsedData) {
-        int[] result = new int[2]; // index 0 for min and 1 for max
-
-        int minDht = (Collections.min(parsedData.getDhtMeasures())).getTimestamp();
-        int maxDht = (Collections.max(parsedData.getDhtMeasures())).getTimestamp();
-        int minPm = (Collections.min(parsedData.getPmMeasures())).getTimestamp();
-        int maxPm = (Collections.max(parsedData.getPmMeasures())).getTimestamp();
-
-        result[0] = minDht <= minPm ? minDht : minPm;
-        result[1] = maxDht >= maxPm ? maxDht : maxPm;
-
-        return result;
-    }
+//    private Map<Integer, Position> getMapOfPositions(ParsedData parsedData) {
+//        int[] timestamps = getMinMaxTimestamp(parsedData);
+//        MyDb myDb = new MyDb(getApplicationContext());
+//        Position[] positions = myDb.selectPositions(timestamps[0], timestamps[1]);
+//        Map<Integer, Position> positionsMap = new HashMap<>();
+//        for(Position p : positions)
+//            positionsMap.put(p.timestamp, p);
+//        // I delete all the positions that I extract because I don't need them in the future
+//        myDb.deletePositions(timestamps[1]);
+//        myDb.closeDb();
+//
+//        return positionsMap;
+//    }
+//
+//    // Gets the min and max timestamp from the received environmental data
+//    // min and max timestamps are then used to extract locations from local db to match them together
+//    private int[] getMinMaxTimestamp(ParsedData parsedData) {
+//        int[] result = new int[2]; // index 0 for min and 1 for max
+//
+//        int minDht = (Collections.min(parsedData.getDhtMeasures())).getTimestamp();
+//        int maxDht = (Collections.max(parsedData.getDhtMeasures())).getTimestamp();
+//        int minPm = (Collections.min(parsedData.getPmMeasures())).getTimestamp();
+//        int maxPm = (Collections.max(parsedData.getPmMeasures())).getTimestamp();
+//
+//        result[0] = minDht <= minPm ? minDht : minPm;
+//        result[1] = maxDht >= maxPm ? maxDht : maxPm;
+//
+//        return result;
+//    }
 }
