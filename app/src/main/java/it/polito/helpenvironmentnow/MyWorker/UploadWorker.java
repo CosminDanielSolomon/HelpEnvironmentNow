@@ -42,9 +42,11 @@ public class UploadWorker extends Worker {
 
         long currentMeasures = 0;
         long totMeasures = myDb.getTotalMeasures();
+        Log.d(TAG,"tot measures: " + totMeasures);
 
         while(currentMeasures < totMeasures) {
             List<Measure> measures = myDb.getSomeMeasures();
+            Log.d(TAG,"List size: " + measures.size());
 
             JSONObject jsonObject = jsonBuilder.buildDataBlock(measures);
             if(jsonObject == null) {

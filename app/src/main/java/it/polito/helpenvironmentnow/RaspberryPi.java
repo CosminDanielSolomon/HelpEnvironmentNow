@@ -200,8 +200,8 @@ public class RaspberryPi {
                     measureH.timestamp = dhtMeasure.getTimestamp();
                     measureH.sensorId = sensorIdHumidity;
                     measureH.data = dhtMeasure.getHumidity();
-                    measureT.geoHash = encodedLocation;
-                    measureT.altitude = altitude;
+                    measureH.geoHash = encodedLocation;
+                    measureH.altitude = altitude;
                     measures.add(measureT);
                     measures.add(measureH);
                 }

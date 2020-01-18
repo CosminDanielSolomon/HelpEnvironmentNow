@@ -12,7 +12,7 @@ import it.polito.helpenvironmentnow.Storage.Position;
 
 public class Matcher {
 
-    public MatchedData matchMeasuresAndPositions(ParsedData parsedData, Map<Integer, Position> positionsMap) {
+    /*public MatchedData matchMeasuresAndPositions(ParsedData parsedData, Map<Integer, Position> positionsMap) {
         List<MatchedDhtMeasure> matchedDhtMeasures = new ArrayList<>();
         List<MatchedPmMeasure> matchedPmMeasures = new ArrayList<>();
 
@@ -59,17 +59,37 @@ public class Matcher {
 
         return new MatchedData(parsedData.getSensorIdTemperature(),
                 parsedData.getSensorIdHumidity(), matchedDhtMeasures, matchedPmMeasures);
-    }
+    }*/
 
-    private String encodeLocation(double latitude, double longitude) {
-        final int numberOfChars = 12; // the same size as the corresponding remote database field - varchar(12)
+    //    private Map<Integer, Position> getMapOfPositions(ParsedData parsedData) {
+//        int[] timestamps = getMinMaxTimestamp(parsedData);
+//        MyDb myDb = new MyDb(getApplicationContext());
+//        Position[] positions = myDb.selectPositions(timestamps[0], timestamps[1]);
+//        Map<Integer, Position> positionsMap = new HashMap<>();
+//        for(Position p : positions)
+//            positionsMap.put(p.timestamp, p);
+//        // I delete all the positions that I extract because I don't need them in the future
+//        myDb.deletePositions(timestamps[1]);
+//        myDb.closeDb();
+//
+//        return positionsMap;
+//    }
 
-        Location location = new Location("geohash");
-        location.setLatitude(latitude);
-        location.setLongitude(longitude);
-        GeoHash hash = GeoHash.fromLocation(location, numberOfChars);
-        return hash.toString();
-    }
+    //    // Gets the min and max timestamp from the received environmental data
+//    // min and max timestamps are then used to extract locations from local db to match them together
+//    private int[] getMinMaxTimestamp(ParsedData parsedData) {
+//        int[] result = new int[2]; // index 0 for min and 1 for max
+//
+//        int minDht = (Collections.min(parsedData.getDhtMeasures())).getTimestamp();
+//        int maxDht = (Collections.max(parsedData.getDhtMeasures())).getTimestamp();
+//        int minPm = (Collections.min(parsedData.getPmMeasures())).getTimestamp();
+//        int maxPm = (Collections.max(parsedData.getPmMeasures())).getTimestamp();
+//
+//        result[0] = minDht <= minPm ? minDht : minPm;
+//        result[1] = maxDht >= maxPm ? maxDht : maxPm;
+//
+//        return result;
+//    }
 
     private int searchMatch(Map<Integer, Position> positionsMap, int currentTimestamp) {
         int matchedTimestamp = 0;

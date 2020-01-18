@@ -4,8 +4,6 @@ import android.content.Context;
 
 import androidx.room.Room;
 
-import org.json.JSONObject;
-
 import java.util.List;
 
 public class MyDb {

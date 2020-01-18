@@ -8,15 +8,11 @@ import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.MySSLSocketFactory;
 import com.loopj.android.http.SyncHttpClient;
 
-import org.json.JSONObject;
-
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 
 import cz.msebera.android.httpclient.Header;
 import cz.msebera.android.httpclient.entity.StringEntity;
-import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
-import it.polito.helpenvironmentnow.Storage.MyDb;
 
 public class HeRestClient {
 
@@ -38,32 +34,6 @@ public class HeRestClient {
         restClient.setResponseTimeout(3600*1000);
         updateServerAddress(context);
     }
-
-    /*public void sendToServer(final JSONObject dataBlock) {
-
-        StringEntity entity = new StringEntity(dataBlock.toString(), StandardCharsets.UTF_8);
-        restClient.put(context, HE_WEB_SERVICE_URL, entity, "application/json", new AsyncHttpResponseHandler() {
-            @Override
-            public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
-                Log.d("Client", "Service PUT SUCCESS:"+statusCode);
-            }
-
-            @Override
-            public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
-                Log.d("Client", "Service PUT FAIL:"+statusCode);
-                MyDb myDb = new MyDb(context);
-                myDb.storeJsonObject(dataBlock, type);
-                myDb.closeDb();
-                MyWorkerManager.enqueueNetworkWorker(context);
-            }
-
-            @Override
-            public void onRetry(int retryNo) {
-                super.onRetry(retryNo);
-                Log.d("AppHelpEnv", "Retrychiamato");
-            }
-        });
-    }*/
 
     public boolean sendToServerWithResult(final String dataBlock) {
         AsyncHttpResponseHandler responseHandler = new AsyncHttpResponseHandler() {

@@ -8,14 +8,8 @@ import android.os.Build;
 import android.os.SystemClock;
 import android.util.Log;
 
-import org.json.JSONObject;
-
-import it.polito.helpenvironmentnow.Helper.JsonBuilder;
 import it.polito.helpenvironmentnow.Helper.LocationInfo;
 import it.polito.helpenvironmentnow.Helper.MyLocationListener;
-import it.polito.helpenvironmentnow.Helper.NetworkInfo;
-import it.polito.helpenvironmentnow.Helper.ParsedData;
-import it.polito.helpenvironmentnow.Helper.Parser;
 import it.polito.helpenvironmentnow.Helper.ServiceNotification;
 import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
 import it.polito.helpenvironmentnow.Storage.MyDb;

@@ -51,4 +51,14 @@ public class LocationInfo {
         GeoHash hash = GeoHash.fromLocation(location, numberOfChars);
         return hash.toString();
     }
+
+    public String encodeLocation(double latitude, double longitude) {
+        final int numberOfChars = 12; // the same size as the corresponding remote database field - varchar(12)
+
+        Location location = new Location("geohash");
+        location.setLatitude(latitude);
+        location.setLongitude(longitude);
+        GeoHash hash = GeoHash.fromLocation(location, numberOfChars);
+        return hash.toString();
+    }
 }

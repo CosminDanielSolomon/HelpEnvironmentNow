@@ -6,39 +6,15 @@ import java.util.List;
 
 // This class is used to parse the stream of bytes received from the Raspberry Pi
 public class Parser {
-//    public ParsedData parseEnvironmentalData(DhtMetaData dhtMetaData, byte[] fixedSensorsData,
-//                                             byte[] dhtVariableData, PmMetaData pmMetaData, byte[] pmVariableData) {
-//        int dhtReads = dhtMetaData.getNumberOfReads();
-//        int dhtReadLength = dhtMetaData.getReadLength();
-//        int dhtTimestampLength = dhtMetaData.getTimestampLength();
-//        int temperatureLength = dhtMetaData.getTemperatureLength();
-//        int humidityLength = dhtMetaData.getHumidityLength();
-//        int dhtSensorIdLength = dhtMetaData.getSensorIdLength();
-//
-//        int pmReads = pmMetaData.getNumberOfReads();
-//        int pmReadLength = pmMetaData.getReadLength();
-//        int pmValueLength =  pmMetaData.getPmValueLength();
-//        int pmTimestampLength = pmMetaData.getTimestampLength();
-//        int pmSensorIdLength = pmMetaData.getSensorIdLength();
-//
-//        int sensorIdTemperature = parseSensorIdTemperature(fixedSensorsData, dhtSensorIdLength);
-//        int sensorIdHumidity = parseSensorIdHumidity(fixedSensorsData, dhtSensorIdLength);
-//        List<DhtMeasure> dhtMeasures = parseDhtData(dhtVariableData, dhtReads, dhtReadLength, dhtTimestampLength, temperatureLength, humidityLength);
-//        List<PmMeasure> pmMeasures = parsePmData(pmVariableData, pmReads, pmReadLength, pmTimestampLength, pmValueLength, pmSensorIdLength);
-//
-//        return new ParsedData(sensorIdTemperature, sensorIdHumidity, dhtMeasures, pmMeasures);
-//    }
 
     public int parseSensorIdTemperature(byte[] fixedDhtData, int sensorIdLength) {
         String strTempId = new String(fixedDhtData, 0, sensorIdLength, StandardCharsets.UTF_8);
-        int sensorIdTemperature = Integer.parseInt(strTempId);
-        return sensorIdTemperature;
+        return Integer.parseInt(strTempId);
     }
 
     public int parseSensorIdHumidity(byte[] fixedDhtData, int sensorIdLength) {
         String strHumId = new String(fixedDhtData, sensorIdLength, sensorIdLength, StandardCharsets.UTF_8);
-        int sensorIdHumidity = Integer.parseInt(strHumId);
-        return sensorIdHumidity;
+        return Integer.parseInt(strHumId);
     }
 
     public List<DhtMeasure> parseDhtData(byte[] dhtData, int dhtReads, int dhtReadLength, int timestampLength,

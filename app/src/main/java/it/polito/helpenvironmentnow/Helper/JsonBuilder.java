@@ -1,22 +1,12 @@
 package it.polito.helpenvironmentnow.Helper;
 
-import android.location.Location;
-
-import com.fonfon.geohash.GeoHash;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import it.polito.helpenvironmentnow.Storage.Measure;
-import it.polito.helpenvironmentnow.Storage.MyDb;
-import it.polito.helpenvironmentnow.Storage.Position;
 
 public class JsonBuilder {
 
