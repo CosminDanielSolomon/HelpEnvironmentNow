@@ -4,6 +4,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import it.polito.helpenvironmentnow.Storage.Measure;
+
 // This class is used to parse the stream of bytes received from the Raspberry Pi
 public class Parser {
 
@@ -17,7 +19,8 @@ public class Parser {
         return Integer.parseInt(strHumId);
     }
 
-    public List<DhtMeasure> parseDhtData(byte[] dhtData, int dhtReads, DhtMetaData dhtMetaData) {
+    public List<Measure> parseDhtData(int sensorIdTemp, int sensorIdHum, byte[] dhtData,
+                                      int dhtReads, DhtMetaData dhtMetaData) {
         int dhtReadLength = dhtMetaData.getReadLength();
         int timestampLength = dhtMetaData.getTimestampLength();
         int temperatureLength = dhtMetaData.getTemperatureLength();
@@ -25,7 +28,7 @@ public class Parser {
 
         String strMessage;
         int offset;
-        List<DhtMeasure> dhtMeasures = new ArrayList<>(dhtReads);
+        List<Measure> dhtMeasures = new ArrayList<>(dhtReads * 2);
 
         for(int readCount = 0; readCount < dhtReads; readCount++) {
             offset = readCount * dhtReadLength;
@@ -35,14 +38,23 @@ public class Parser {
                     timestampLength + temperatureLength));
             double humidity = Double.parseDouble(strMessage.substring(timestampLength + temperatureLength,
                     timestampLength + temperatureLength + humidityLength));
-            DhtMeasure dhtMeasure = new DhtMeasure(timestamp, temperature, humidity);
-            dhtMeasures.add(dhtMeasure);
+
+            Measure measureT = new Measure();
+            measureT.sensorId = sensorIdTemp;
+            measureT.timestamp = timestamp;
+            measureT.data = temperature;
+            Measure measureH = new Measure();
+            measureH.sensorId = sensorIdHum;
+            measureH.timestamp = timestamp;
+            measureH.data = humidity;
+            dhtMeasures.add(measureT);
+            dhtMeasures.add(measureH);
         }
 
         return dhtMeasures;
     }
 
-    public List<PmMeasure> parsePmData(byte[] pmData, int pmReads, PmMetaData pmMetaData) {
+    public List<Measure> parsePmData(byte[] pmData, int pmReads, PmMetaData pmMetaData) {
         int pmReadLength = pmMetaData.getReadLength();
         int timestampLength = pmMetaData.getTimestampLength();
         int pmValueLength = pmMetaData.getPmValueLength();
@@ -50,7 +62,7 @@ public class Parser {
 
         String strMessage;
         int offset;
-        List<PmMeasure> pmMeasures = new ArrayList<>(pmReads);
+        List<Measure> pmMeasures = new ArrayList<>(pmReads * 2);
 
         for(int readCount = 0; readCount < pmReads; readCount++) {
             offset = readCount * pmReadLength;
@@ -63,8 +75,17 @@ public class Parser {
                     pmValueLength, timestampLength + pmValueLength + pmValueLength + sensorIdLength));
             int sensorId10 = Integer.parseInt(strMessage.substring(timestampLength + pmValueLength + pmValueLength + sensorIdLength,
                     timestampLength + pmValueLength + pmValueLength + sensorIdLength + sensorIdLength));
-            PmMeasure pmMeasure = new PmMeasure(timestamp, sensorId25, pm25, sensorId10, pm10);
-            pmMeasures.add(pmMeasure);
+
+            Measure measurePm10 = new Measure();
+            measurePm10.sensorId = sensorId10;
+            measurePm10.timestamp = timestamp;
+            measurePm10.data = pm10;
+            Measure measurePm25 = new Measure();
+            measurePm25.sensorId = sensorId25;
+            measurePm25.timestamp = timestamp;
+            measurePm25.data = pm25;
+            pmMeasures.add(measurePm10);
+            pmMeasures.add(measurePm25);
         }
 
         return pmMeasures;

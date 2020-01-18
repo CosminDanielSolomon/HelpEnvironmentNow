@@ -12,14 +12,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 
-import it.polito.helpenvironmentnow.Helper.DhtMeasure;
 import it.polito.helpenvironmentnow.Helper.DhtMetaData;
-import it.polito.helpenvironmentnow.Helper.LocationInfo;
+import it.polito.helpenvironmentnow.Helper.Matcher;
 import it.polito.helpenvironmentnow.Helper.Parser;
-import it.polito.helpenvironmentnow.Helper.PmMeasure;
 import it.polito.helpenvironmentnow.Helper.PmMetaData;
 import it.polito.helpenvironmentnow.Storage.Measure;
 import it.polito.helpenvironmentnow.Storage.MyDb;
@@ -160,9 +157,8 @@ public class RaspberryPi {
     private void readAndSaveDhtData(InputStream socketInputStream, DhtMetaData dhtMetaData,
                                     byte[] fixedDhtData, Location loc, MyDb myDb) throws IOException {
 
-        String encodedLocation = LocationInfo.encodeLocation(loc);
-        double altitude = loc.getAltitude();
         Parser parser = new Parser();
+        Matcher matcher = new Matcher();
         int sensorIdTemperature = parser.parseSensorIdTemperature(fixedDhtData, dhtMetaData.getSensorIdLength());
         int sensorIdHumidity = parser.parseSensorIdHumidity(fixedDhtData, dhtMetaData.getSensorIdLength());
 
@@ -185,25 +181,13 @@ public class RaspberryPi {
             if(result == size) {
                 currentMeasures += n;
 
-                List<DhtMeasure> parsedMeasures = parser.parseDhtData(data, n, dhtMetaData);
-                List<Measure> measures = new ArrayList<>(n*2);
-                for (DhtMeasure dhtMeasure : parsedMeasures) {
-                    Measure measureT = new Measure();
-                    measureT.timestamp = dhtMeasure.getTimestamp();
-                    measureT.sensorId = sensorIdTemperature;
-                    measureT.data = dhtMeasure.getTemperature();
-                    measureT.geoHash = encodedLocation;
-                    measureT.altitude = altitude;
-                    Measure measureH = new Measure();
-                    measureH.timestamp = dhtMeasure.getTimestamp();
-                    measureH.sensorId = sensorIdHumidity;
-                    measureH.data = dhtMeasure.getHumidity();
-                    measureH.geoHash = encodedLocation;
-                    measureH.altitude = altitude;
-                    measures.add(measureT);
-                    measures.add(measureH);
-                }
-                myDb.insertMeasures(measures);
+                // I parse the stream of bytes and I build Measure objects
+                List<Measure> parsedMeasures = parser.parseDhtData(sensorIdTemperature,
+                        sensorIdHumidity, data, n, dhtMetaData);
+                // I assign position to each measure
+                matcher.matchMeasuresAndPositions(loc, parsedMeasures, myDb);
+                // I save measures into local database
+                myDb.insertMeasures(parsedMeasures);
                 totalInsertions += n*2;
             } else {
                 result = -1;
@@ -248,8 +232,6 @@ public class RaspberryPi {
     private void readAndSavePmData(InputStream socketInputStream, PmMetaData pmMetaData,
                                    Location loc, MyDb myDb) throws IOException {
 
-        String encodedLocation = LocationInfo.encodeLocation(loc);
-        double altitude = loc.getAltitude();
         Parser parser = new Parser();
 
         final int N_MEASURES = 8000; // max measures to receive in one cycle, before parse them
@@ -271,25 +253,9 @@ public class RaspberryPi {
             if(result == size) {
                 currentMeasures += n;
 
-                List<PmMeasure> parsedMeasures = parser.parsePmData(data, n, pmMetaData);
-                List<Measure> measures = new ArrayList<>(n*2);
-                for (PmMeasure pmMeasure : parsedMeasures) {
-                    Measure measurePm10 = new Measure();
-                    measurePm10.timestamp = pmMeasure.getTimestamp();
-                    measurePm10.sensorId = pmMeasure.getSensorId10();
-                    measurePm10.data = pmMeasure.getPm10();
-                    measurePm10.geoHash = encodedLocation;
-                    measurePm10.altitude = altitude;
-                    Measure measurePm25 = new Measure();
-                    measurePm25.timestamp = pmMeasure.getTimestamp();
-                    measurePm25.sensorId = pmMeasure.getSensorId25();
-                    measurePm25.data = pmMeasure.getPm25();
-                    measurePm25.geoHash = encodedLocation;
-                    measurePm25.altitude = altitude;
-                    measures.add(measurePm10);
-                    measures.add(measurePm25);
-                }
-                myDb.insertMeasures(measures);
+                List<Measure> parsedMeasures = parser.parsePmData(data, n, pmMetaData);
+               // TODO match
+                myDb.insertMeasures(parsedMeasures);
                 totalInsertions += n*2;
             } else {
                 result = -1;

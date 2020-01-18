@@ -2,90 +2,68 @@ package it.polito.helpenvironmentnow.Helper;
 
 import android.location.Location;
 
-import com.fonfon.geohash.GeoHash;
-
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import it.polito.helpenvironmentnow.Storage.Measure;
+import it.polito.helpenvironmentnow.Storage.MyDb;
 import it.polito.helpenvironmentnow.Storage.Position;
 
 public class Matcher {
 
-    /*public void matchMeasuresAndPositions( Map<Integer, Position> positionsMap) {
+    public void matchMeasuresAndPositions(Location location, List<Measure> parsedMeasures, MyDb myDb) {
 
-        if(positionsMap.size() == 0) {
-            // No positions available for the matching. So I put 0.0 for latitude, longitude and altitude
-            // for all the measures received from the Raspberry Pi
-            for (DhtMeasure dhtMeasure : parsedData.getDhtMeasures()) {
-                MatchedDhtMeasure matchedDhtMeasure = new MatchedDhtMeasure(dhtMeasure.getTimestamp(),
-                        dhtMeasure.getTemperature(), dhtMeasure.getHumidity(),
-                        encodeLocation(0.0, 0.0), 0.0);
-                matchedDhtMeasures.add(matchedDhtMeasure);
-            }
-            for(PmMeasure pmMeasure : parsedData.getPmMeasures()) {
-                MatchedPmMeasure matchedPmMeasure = new MatchedPmMeasure(pmMeasure.getTimestamp(),
-                        pmMeasure.getSensorId25(), pmMeasure.getPm25(), pmMeasure.getSensorId10(),
-                        pmMeasure.getPm10(), encodeLocation(0.0, 0.0), 0.0);
-                matchedPmMeasures.add(matchedPmMeasure);
+        if(location != null) {
+            // CLASSIC MODE. I put the received location for all the measures received
+            // from the Raspberry Pi
+            String geoHash = LocationInfo.encodeLocation(location);
+            double altitude = location.getAltitude();
+            for(Measure measure : parsedMeasures) {
+                measure.geoHash = geoHash;
+                measure.altitude = altitude;
             }
         } else {
-            // Matching fot DHT measures
-            for (DhtMeasure dhtMeasure : parsedData.getDhtMeasures()) {
-                int currentTimestamp = dhtMeasure.getTimestamp();
-                int matchedTimestamp = searchMatch(positionsMap, currentTimestamp);
-
-                Position pos = positionsMap.get(matchedTimestamp);
-                MatchedDhtMeasure matchedDhtMeasure = new MatchedDhtMeasure(currentTimestamp,
-                        dhtMeasure.getTemperature(), dhtMeasure.getHumidity(),
-                        encodeLocation(pos.latitude, pos.longitude), pos.altitude);
-                matchedDhtMeasures.add(matchedDhtMeasure);
+            // MOVEMENT MODE. I have to match the measures with the recorded locations
+            List<Integer> timestamps = new ArrayList<>(parsedMeasures.size());
+            for(Measure measure : parsedMeasures) {
+                timestamps.add(measure.timestamp);
             }
-
-            // Matching fot PM measures
-            for (PmMeasure pmMeasure : parsedData.getPmMeasures()) {
-                int currentTimestamp = pmMeasure.getTimestamp();
-                int matchedTimestamp = searchMatch(positionsMap, currentTimestamp);
-
-                Position pos = positionsMap.get(matchedTimestamp);
-                MatchedPmMeasure matchedPmMeasure = new MatchedPmMeasure(pmMeasure.getTimestamp(),
-                        pmMeasure.getSensorId25(), pmMeasure.getPm25(), pmMeasure.getSensorId10(),
-                        pmMeasure.getPm10(), encodeLocation(pos.latitude, pos.longitude), pos.altitude);
-                matchedPmMeasures.add(matchedPmMeasure);
+            Map<Integer, Position> positionsMap = getMapOfPositions(timestamps, myDb);
+            if(positionsMap.size() > 0) {
+                int matchedTimestamp;
+                Position matchedPos;
+                for (Measure measure : parsedMeasures) {
+                    matchedTimestamp = searchMatch(positionsMap, measure.timestamp);
+                    matchedPos = positionsMap.get(matchedTimestamp);
+                    measure.geoHash = LocationInfo.encodeLocation(matchedPos.latitude, matchedPos.longitude);
+                    measure.altitude = matchedPos.altitude;
+                }
+            } else {
+                for (Measure measure : parsedMeasures) {
+                    measure.geoHash = LocationInfo.encodeLocation(0.0, 0.0);
+                    measure.altitude = 0.0;
+                }
             }
         }
 
-    }*/
+    }
 
-    //    private Map<Integer, Position> getMapOfPositions(ParsedData parsedData) {
-//        int[] timestamps = getMinMaxTimestamp(parsedData);
-//        MyDb myDb = new MyDb(getApplicationContext());
-//        Position[] positions = myDb.selectPositions(timestamps[0], timestamps[1]);
-//        Map<Integer, Position> positionsMap = new HashMap<>();
-//        for(Position p : positions)
-//            positionsMap.put(p.timestamp, p);
-//        // I delete all the positions that I extract because I don't need them in the future
-//        myDb.deletePositions(timestamps[1]);
-//        myDb.closeDb();
-//
-//        return positionsMap;
-//    }
+    private Map<Integer, Position> getMapOfPositions(List<Integer> timestamps, MyDb myDb) {
+        int minT = Collections.min(timestamps);
+        int maxT = Collections.max(timestamps);
 
-    //    // Gets the min and max timestamp from the received environmental data
-//    // min and max timestamps are then used to extract locations from local db to match them together
-//    private int[] getMinMaxTimestamp(ParsedData parsedData) {
-//        int[] result = new int[2]; // index 0 for min and 1 for max
-//
-//        int minDht = (Collections.min(parsedData.getDhtMeasures())).getTimestamp();
-//        int maxDht = (Collections.max(parsedData.getDhtMeasures())).getTimestamp();
-//        int minPm = (Collections.min(parsedData.getPmMeasures())).getTimestamp();
-//        int maxPm = (Collections.max(parsedData.getPmMeasures())).getTimestamp();
-//
-//        result[0] = minDht <= minPm ? minDht : minPm;
-//        result[1] = maxDht >= maxPm ? maxDht : maxPm;
-//
-//        return result;
-//    }
+        Position[] positions = myDb.selectPositions(minT, maxT);
+        Map<Integer, Position> positionsMap = new HashMap<>();
+        for(Position p : positions)
+            positionsMap.put(p.timestamp, p);
+        // I delete all the positions that I extract because I don't need them in the future
+        myDb.deletePositions(maxT);
+
+        return positionsMap;
+    }
 
     private int searchMatch(Map<Integer, Position> positionsMap, int currentTimestamp) {
         int matchedTimestamp = 0;
