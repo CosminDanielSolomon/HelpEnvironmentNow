@@ -17,8 +17,12 @@ public class Parser {
         return Integer.parseInt(strHumId);
     }
 
-    public List<DhtMeasure> parseDhtData(byte[] dhtData, int dhtReads, int dhtReadLength, int timestampLength,
-                                          int temperatureLength, int humidityLength) {
+    public List<DhtMeasure> parseDhtData(byte[] dhtData, int dhtReads, DhtMetaData dhtMetaData) {
+        int dhtReadLength = dhtMetaData.getReadLength();
+        int timestampLength = dhtMetaData.getTimestampLength();
+        int temperatureLength = dhtMetaData.getTemperatureLength();
+        int humidityLength = dhtMetaData.getHumidityLength();
+
         String strMessage;
         int offset;
         List<DhtMeasure> dhtMeasures = new ArrayList<>(dhtReads);
@@ -38,8 +42,12 @@ public class Parser {
         return dhtMeasures;
     }
 
-    public List<PmMeasure> parsePmData(byte[] pmData, int pmReads, int pmReadLength, int timestampLength,
-                                        int pmValueLength, int sensorIdLength) {
+    public List<PmMeasure> parsePmData(byte[] pmData, int pmReads, PmMetaData pmMetaData) {
+        int pmReadLength = pmMetaData.getReadLength();
+        int timestampLength = pmMetaData.getTimestampLength();
+        int pmValueLength = pmMetaData.getPmValueLength();
+        int sensorIdLength = pmMetaData.getSensorIdLength();
+
         String strMessage;
         int offset;
         List<PmMeasure> pmMeasures = new ArrayList<>(pmReads);

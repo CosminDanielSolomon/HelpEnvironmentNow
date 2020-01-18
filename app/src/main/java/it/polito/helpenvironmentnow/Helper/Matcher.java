@@ -12,9 +12,7 @@ import it.polito.helpenvironmentnow.Storage.Position;
 
 public class Matcher {
 
-    /*public MatchedData matchMeasuresAndPositions(ParsedData parsedData, Map<Integer, Position> positionsMap) {
-        List<MatchedDhtMeasure> matchedDhtMeasures = new ArrayList<>();
-        List<MatchedPmMeasure> matchedPmMeasures = new ArrayList<>();
+    /*public void matchMeasuresAndPositions( Map<Integer, Position> positionsMap) {
 
         if(positionsMap.size() == 0) {
             // No positions available for the matching. So I put 0.0 for latitude, longitude and altitude
@@ -57,8 +55,6 @@ public class Matcher {
             }
         }
 
-        return new MatchedData(parsedData.getSensorIdTemperature(),
-                parsedData.getSensorIdHumidity(), matchedDhtMeasures, matchedPmMeasures);
     }*/
 
     //    private Map<Integer, Position> getMapOfPositions(ParsedData parsedData) {

@@ -167,7 +167,7 @@ public class RaspberryPi {
         int sensorIdHumidity = parser.parseSensorIdHumidity(fixedDhtData, dhtMetaData.getSensorIdLength());
 
         final int N_MEASURES = 1000; // max measures to receive in one cycle, before parse them
-        int measureLength = dhtMetaData.getReadLength(); // is the measure length
+        int measureLength = dhtMetaData.getReadLength(); // is the measure length in bytes
         final int BUFFER_SIZE = N_MEASURES * measureLength; // size of the local buffer
         byte[] data = new byte[BUFFER_SIZE];
 
@@ -185,9 +185,7 @@ public class RaspberryPi {
             if(result == size) {
                 currentMeasures += n;
 
-                List<DhtMeasure> parsedMeasures = parser.parseDhtData(data, n, measureLength,
-                        dhtMetaData.getTimestampLength(), dhtMetaData.getTemperatureLength(),
-                        dhtMetaData.getHumidityLength());
+                List<DhtMeasure> parsedMeasures = parser.parseDhtData(data, n, dhtMetaData);
                 List<Measure> measures = new ArrayList<>(n*2);
                 for (DhtMeasure dhtMeasure : parsedMeasures) {
                     Measure measureT = new Measure();
@@ -273,8 +271,7 @@ public class RaspberryPi {
             if(result == size) {
                 currentMeasures += n;
 
-                List<PmMeasure> parsedMeasures = parser.parsePmData(data, n, measureLength, pmMetaData.getTimestampLength(),
-                        pmMetaData.getPmValueLength(), pmMetaData.getSensorIdLength());
+                List<PmMeasure> parsedMeasures = parser.parsePmData(data, n, pmMetaData);
                 List<Measure> measures = new ArrayList<>(n*2);
                 for (PmMeasure pmMeasure : parsedMeasures) {
                     Measure measurePm10 = new Measure();
