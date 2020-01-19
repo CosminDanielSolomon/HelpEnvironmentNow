@@ -9,6 +9,64 @@ import it.polito.helpenvironmentnow.Storage.Measure;
 // This class is used to parse the stream of bytes received from the Raspberry Pi
 public class Parser {
 
+    private static final int DHT_NUMBER_OF_READS_CHARS = 8; // the number of chars used to represent the length(in bytes) of number of dht reads
+    private static final int DHT_READ_LENGTH_CHARS = 4; // the number of chars used to represent the length(in bytes) of a message
+    private static final int SENSOR_ID_LENGTH_CHARS = 2; // the number of chars used to represent the length(in bytes) of sensor id (Sensor_SN)
+    private static final int TIMESTAMP_LENGTH_CHARS = 2; // the number of chars used to represent the length(in bytes) of timestamp
+    private static final int TEMPERATURE_LENGTH_CHARS = 2; // the number of chars used to represent the length(in bytes) of temperature
+    private static final int HUMIDITY_LENGTH_CHARS = 2; // the number of chars used to represent the length(in bytes) of humidity
+    public static final int DHT_META_DATA_CHARS = DHT_NUMBER_OF_READS_CHARS + DHT_READ_LENGTH_CHARS + SENSOR_ID_LENGTH_CHARS +
+            TIMESTAMP_LENGTH_CHARS + TEMPERATURE_LENGTH_CHARS + HUMIDITY_LENGTH_CHARS;
+
+    private static final int PM_NUMBER_OF_READS_CHARS = 8; // the number of chars used to represent the length(in bytes) of number of pm reads
+    private static final int PM_READ_LENGTH_CHARS = 4; // the number of chars used to represent the length(in bytes) of a pm read
+    private static final int PM_VALUE_LENGTH_CHARS = 1; // the number of chars used to represent the length(in bytes) of pm measure(both pm2.5 and pm10)
+    public static final int PM_META_DATA_CHARS = PM_NUMBER_OF_READS_CHARS + PM_READ_LENGTH_CHARS +
+            TIMESTAMP_LENGTH_CHARS + PM_VALUE_LENGTH_CHARS + SENSOR_ID_LENGTH_CHARS;
+
+    public DhtMetaData parseDhtMetaData(String strMetaData) {
+        int bIndex = 0, eIndex = DHT_NUMBER_OF_READS_CHARS;
+        DhtMetaData dhtMetaData = new DhtMetaData();
+        dhtMetaData.setNumberOfReads(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+        bIndex = eIndex;
+        eIndex += DHT_READ_LENGTH_CHARS;
+        dhtMetaData.setReadLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+        bIndex = eIndex;
+        eIndex += SENSOR_ID_LENGTH_CHARS;
+        dhtMetaData.setSensorIdLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+        bIndex = eIndex;
+        eIndex += TIMESTAMP_LENGTH_CHARS;
+        dhtMetaData.setTimestampLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+        bIndex = eIndex;
+        eIndex += TEMPERATURE_LENGTH_CHARS;
+        dhtMetaData.setTemperatureLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+        bIndex = eIndex;
+        eIndex += HUMIDITY_LENGTH_CHARS;
+        dhtMetaData.setHumidityLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+
+        return dhtMetaData;
+    }
+
+    public PmMetaData parsePmMetaData(String strMetaData) {
+        int bIndex = 0, eIndex = PM_NUMBER_OF_READS_CHARS;
+        PmMetaData pmMetaData = new PmMetaData();
+        pmMetaData.setNumberOfReads(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+        bIndex = eIndex;
+        eIndex += PM_READ_LENGTH_CHARS;
+        pmMetaData.setReadLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+        bIndex = eIndex;
+        eIndex += TIMESTAMP_LENGTH_CHARS;
+        pmMetaData.setTimestampLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+        bIndex = eIndex;
+        eIndex += PM_VALUE_LENGTH_CHARS;
+        pmMetaData.setPmValueLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+        bIndex = eIndex;
+        eIndex += SENSOR_ID_LENGTH_CHARS;
+        pmMetaData.setSensorIdLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
+
+        return pmMetaData;
+    }
+
     public int parseSensorIdTemperature(byte[] fixedDhtData, int sensorIdLength) {
         String strTempId = new String(fixedDhtData, 0, sensorIdLength, StandardCharsets.UTF_8);
         return Integer.parseInt(strTempId);

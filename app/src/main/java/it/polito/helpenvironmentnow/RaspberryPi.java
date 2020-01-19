@@ -21,26 +21,14 @@ import it.polito.helpenvironmentnow.Helper.PmMetaData;
 import it.polito.helpenvironmentnow.Storage.Measure;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 
+import static it.polito.helpenvironmentnow.Helper.Parser.DHT_META_DATA_CHARS;
+import static it.polito.helpenvironmentnow.Helper.Parser.PM_META_DATA_CHARS;
+
 public class RaspberryPi {
 
     private String TAG = "RaspberryPi";
     private static final int MAX_CONNNECTION_ATTEMPTS = 15; // the max number to retry establish bluetooth connection if fails
     private static final int BLUETOOTH_MSECONDS_SLEEP = 3000; // milliseconds to sleep after connection fails
-
-    private static final int DHT_NUMBER_OF_READS_CHARS = 8; // the number of chars used to represent the length(in bytes) of number of dht reads
-    private static final int DHT_READ_LENGTH_CHARS = 4; // the number of chars used to represent the length(in bytes) of a message
-    private static final int SENSOR_ID_LENGTH_CHARS = 2; // the number of chars used to represent the length(in bytes) of sensor id (Sensor_SN)
-    private static final int TIMESTAMP_LENGTH_CHARS = 2; // the number of chars used to represent the length(in bytes) of timestamp
-    private static final int TEMPERATURE_LENGTH_CHARS = 2; // the number of chars used to represent the length(in bytes) of temperature
-    private static final int HUMIDITY_LENGTH_CHARS = 2; // the number of chars used to represent the length(in bytes) of humidity
-    private static final int DHT_META_DATA_CHARS = DHT_NUMBER_OF_READS_CHARS + DHT_READ_LENGTH_CHARS + SENSOR_ID_LENGTH_CHARS +
-            TIMESTAMP_LENGTH_CHARS + TEMPERATURE_LENGTH_CHARS + HUMIDITY_LENGTH_CHARS;
-
-    private static final int PM_NUMBER_OF_READS_CHARS = 8; // the number of chars used to represent the length(in bytes) of number of pm reads
-    private static final int PM_READ_LENGTH_CHARS = 4; // the number of chars used to represent the length(in bytes) of a pm read
-    private static final int PM_VALUE_LENGTH_CHARS = 1; // the number of chars used to represent the length(in bytes) of pm measure(both pm2.5 and pm10)
-    private static final int PM_META_DATA_CHARS = PM_NUMBER_OF_READS_CHARS + PM_READ_LENGTH_CHARS +
-            TIMESTAMP_LENGTH_CHARS + PM_VALUE_LENGTH_CHARS + SENSOR_ID_LENGTH_CHARS;
 
     private BluetoothAdapter bluetoothAdapter;
 
@@ -80,13 +68,16 @@ public class RaspberryPi {
                 try {
                     InputStream socketInputStream = socket.getInputStream();
 
-                    DhtMetaData dhtMetaData = readTempHumMetaData(socketInputStream);
-                    byte[] dhtFixedData = readFixedSensorsData(socketInputStream, dhtMetaData);
-                    readAndSaveDhtData(socketInputStream, dhtMetaData, dhtFixedData, location, myDb);
+                    String dhtMetaData = readTempHumMetaData(socketInputStream);
+                    Parser parser = new Parser();
+                    DhtMetaData parsedDhtMetaData = parser.parseDhtMetaData(dhtMetaData);
+                    byte[] dhtFixedData = readFixedSensorsData(socketInputStream, parsedDhtMetaData);
+                    readAndSaveDhtData(socketInputStream, parsedDhtMetaData, dhtFixedData, location, myDb);
                     Log.d(TAG,"dht variable SUCCESS");
 
-                    PmMetaData pmMetaData = readPmMetaData(socketInputStream);
-                    readAndSavePmData(socketInputStream, pmMetaData, location, myDb);
+                    String pmMetaData = readPmMetaData(socketInputStream);
+                    PmMetaData parsedPmMetaData = parser.parsePmMetaData(pmMetaData);
+                    readAndSavePmData(socketInputStream, parsedPmMetaData, location, myDb);
                     Log.d(TAG,"pm variable SUCCESS");
 
                     OutputStream socketOutputStream = socket.getOutputStream();
@@ -110,36 +101,12 @@ public class RaspberryPi {
 
     // This method reads the number of messages that follows and their size and sets the private
     // fields of the object DhtMetaData
-    private DhtMetaData readTempHumMetaData(InputStream socketInputStream) throws IOException {
+    private String readTempHumMetaData(InputStream socketInputStream) throws IOException {
         byte[] buffer = new byte[DHT_META_DATA_CHARS];
 
         readSocketData(socketInputStream, buffer, DHT_META_DATA_CHARS);
-        String strMetaData = new String(buffer, StandardCharsets.UTF_8);
 
-        return parseDhtMetaData(strMetaData);
-    }
-
-    private DhtMetaData parseDhtMetaData(String strMetaData) {
-        int bIndex = 0, eIndex = DHT_NUMBER_OF_READS_CHARS;
-        DhtMetaData dhtMetaData = new DhtMetaData();
-        dhtMetaData.setNumberOfReads(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
-        bIndex = eIndex;
-        eIndex += DHT_READ_LENGTH_CHARS;
-        dhtMetaData.setReadLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
-        bIndex = eIndex;
-        eIndex += SENSOR_ID_LENGTH_CHARS;
-        dhtMetaData.setSensorIdLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
-        bIndex = eIndex;
-        eIndex += TIMESTAMP_LENGTH_CHARS;
-        dhtMetaData.setTimestampLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
-        bIndex = eIndex;
-        eIndex += TEMPERATURE_LENGTH_CHARS;
-        dhtMetaData.setTemperatureLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
-        bIndex = eIndex;
-        eIndex += HUMIDITY_LENGTH_CHARS;
-        dhtMetaData.setHumidityLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
-
-        return dhtMetaData;
+        return new String(buffer, StandardCharsets.UTF_8);
     }
 
     private byte[] readFixedSensorsData(InputStream socketInputStream, DhtMetaData dhtMetaData) throws IOException {
@@ -198,33 +165,12 @@ public class RaspberryPi {
 
     // This method reads the number of messages that follows and their size and sets the private
     // fields of the object PmMetaData
-    private PmMetaData readPmMetaData(InputStream socketInputStream) throws IOException {
+    private String readPmMetaData(InputStream socketInputStream) throws IOException {
         byte[] buffer = new byte[PM_META_DATA_CHARS];
 
         readSocketData(socketInputStream, buffer, PM_META_DATA_CHARS);
-        String strMetaData = new String(buffer, StandardCharsets.UTF_8);
 
-        return parsePmMetaData(strMetaData);
-    }
-
-    private PmMetaData parsePmMetaData(String strMetaData) {
-        int bIndex = 0, eIndex = PM_NUMBER_OF_READS_CHARS;
-        PmMetaData pmMetaData = new PmMetaData();
-        pmMetaData.setNumberOfReads(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
-        bIndex = eIndex;
-        eIndex += PM_READ_LENGTH_CHARS;
-        pmMetaData.setReadLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
-        bIndex = eIndex;
-        eIndex += TIMESTAMP_LENGTH_CHARS;
-        pmMetaData.setTimestampLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
-        bIndex = eIndex;
-        eIndex += PM_VALUE_LENGTH_CHARS;
-        pmMetaData.setPmValueLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
-        bIndex = eIndex;
-        eIndex += SENSOR_ID_LENGTH_CHARS;
-        pmMetaData.setSensorIdLength(Integer.parseInt(strMetaData.substring(bIndex, eIndex)));
-
-        return pmMetaData;
+        return new String(buffer, StandardCharsets.UTF_8);
     }
 
     // This method receives all PM data from Raspberry Pi, parse them and save in local db
