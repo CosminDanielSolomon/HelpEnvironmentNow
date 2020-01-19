@@ -34,13 +34,8 @@ public class MyDb {
         return measuresDao.getSomeMeasures();
     }
 
-    public void insertPosition(int t, double lat, double lon, double alt) {
-        Position currentPosition = new Position();
-        currentPosition.timestamp = t;
-        currentPosition.latitude = lat;
-        currentPosition.longitude = lon;
-        currentPosition.altitude = alt;
-        positionsDao.insertPosition(currentPosition);
+    public void insertPositions(List<Position> positions) {
+        positionsDao.insertPositions(positions);
     }
 
     public Position[] selectPositions(int startT, int endT) {

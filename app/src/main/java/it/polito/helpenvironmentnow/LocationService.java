@@ -21,10 +21,13 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import it.polito.helpenvironmentnow.Helper.ServiceNotification;
 import it.polito.helpenvironmentnow.Storage.MyDb;
+import it.polito.helpenvironmentnow.Storage.Position;
 
 // This SERVICE is enabled when the user activates the MOVEMENT MODE and it is used to get
 // continuous location updates. The locations are saved into a local database; in this way
@@ -89,13 +92,19 @@ public class LocationService extends Service {
                     return;
                 }
 
+                List<Position> positions = new ArrayList<>();
                 for (Location location : locationResult.getLocations()) {
-                    int timestamp =  ((Long)TimeUnit.MILLISECONDS.toSeconds(location.getTime())).intValue();
+                    int timestamp = ((Long)TimeUnit.MILLISECONDS.toSeconds(location.getTime())).intValue();
                     Log.d(TAG, "t:" + timestamp + " lat:" + location.getLatitude() + " long:"
                             + location.getLongitude() + " alt:" + location.getAltitude());
-                    myDb.insertPosition(timestamp, location.getLatitude(), location.getLongitude(),
-                            location.getAltitude());
+                    Position currentPosition = new Position();
+                    currentPosition.timestamp = timestamp;
+                    currentPosition.latitude = location.getLatitude();
+                    currentPosition.longitude = location.getLongitude();
+                    currentPosition.altitude = location.getAltitude();
+                    positions.add(currentPosition);
                 }
+                myDb.insertPositions(positions);
             }
         };
 
