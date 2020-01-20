@@ -15,17 +15,17 @@ import it.polito.helpenvironmentnow.R;
 public class ServiceNotification {
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public static Notification getMyOwnNotification(Context context, String channelName,
+    public static Notification getMyOwnNotification(Context context, String id, String channelName,
                                                     String contentTitle, String contentText) {
-        String NOTIFICATION_CHANNEL_ID = "it.polito.helpenvironmentnow";
-        NotificationChannel chan = new NotificationChannel(NOTIFICATION_CHANNEL_ID, channelName, NotificationManager.IMPORTANCE_NONE);
+
+        NotificationChannel chan = new NotificationChannel(id, channelName, NotificationManager.IMPORTANCE_NONE);
         chan.setLightColor(Color.BLUE);
         chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         assert manager != null;
         manager.createNotificationChannel(chan);
 
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID);
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context, id);
         Notification notification = notificationBuilder.setOngoing(true)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle(contentTitle)

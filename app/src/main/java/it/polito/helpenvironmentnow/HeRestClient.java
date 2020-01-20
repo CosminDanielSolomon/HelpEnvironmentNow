@@ -30,7 +30,6 @@ public class HeRestClient {
         restClient = new SyncHttpClient();
         acceptAllCertificate();
         restClient.setBasicAuth("androidClient","a147_mx5:3");
-        //restClient.setTimeout(60*1000);
         restClient.setResponseTimeout(3600*1000);
         updateServerAddress(context);
     }

@@ -12,6 +12,8 @@ import it.polito.helpenvironmentnow.Storage.MyDb;
 
 public class MovementService extends IntentService {
 
+    private final int SERVICE_ID = 2;
+
     public MovementService() {
         super("MovementService");
     }
@@ -23,11 +25,11 @@ public class MovementService extends IntentService {
         // the official guide: "Foreground services must display a Notification."
         Notification notification;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) // check if Android version is 8 or higher
-            notification = ServiceNotification.getMyOwnNotification(this, "Temporary HelpEnvironmentNow Service",
+            notification = ServiceNotification.getMyOwnNotification(this, "move", "Temporary HelpEnvironmentNow Service",
                     "Background Temporary Service(movement mode)", "Environmental data exchange"); // foreground service notification for Android 8+
         else
             notification =  new Notification(); // foreground service notification for Android 7.x or below
-        startForeground(1, notification);
+        startForeground(SERVICE_ID, notification);
     }
 
     @Override
@@ -45,7 +47,6 @@ public class MovementService extends IntentService {
         if(insertions > 0) {
             /* I enqueue a work that the Worker Manager will execute when network became available */
             MyWorkerManager.enqueueNetworkWorker(getApplicationContext());
-            Log.d("ClassicService", "Service Completed");
         }
 
         Log.d("MovementService", "Service completed!");

@@ -16,6 +16,8 @@ import it.polito.helpenvironmentnow.Storage.MyDb;
 
 public class ClassicService extends IntentService implements MyLocationListener {
 
+    private final int SERVICE_ID = 1;
+
     private Location curLocation;
     private boolean curLocationReady = false;
 
@@ -30,11 +32,11 @@ public class ClassicService extends IntentService implements MyLocationListener 
         // the official guide: "Foreground services must display a Notification."
         Notification notification;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) // check if Android version is 8 or higher
-            notification = ServiceNotification.getMyOwnNotification(this, "Temporary HelpEnvironmentNow Service",
+            notification = ServiceNotification.getMyOwnNotification(this, "classic", "Temporary HelpEnvironmentNow Service",
                     "Background Temporary Service(classic mode)", "Environmental data exchange"); // foreground service notification for Android 8+
         else
             notification =  new Notification(); // foreground service notification for Android 7.x or below
-        startForeground(1, notification);
+        startForeground(SERVICE_ID, notification);
     }
 
     @Override

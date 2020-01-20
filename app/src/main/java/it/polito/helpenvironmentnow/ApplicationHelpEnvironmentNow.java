@@ -90,8 +90,13 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
                     if(myBeaconNamespaceId.equals(detectedNamespaceId) && myBeaconInstanceId.equals(detectedInstanceId)) {
                         String remoteMacAddress = beacon.getBluetoothAddress();
                         if(remoteMacAddress != null) {
-                            Intent intent = new Intent(this, ClassicService.class);
-                            Log.d(TAG, "remoteMacAddress:" + remoteMacAddress + " " + detectedNamespaceId.toString() + detectedInstanceId.toString());
+                            SharedPreferences sharedPref = getSharedPreferences(getString(R.string.config_file), Context.MODE_PRIVATE);
+                            boolean movementMode = sharedPref.getBoolean(getString(R.string.MODE), false);
+                            Intent intent;
+                            if(movementMode)
+                                intent = new Intent(getApplicationContext(), MovementService.class);
+                            else
+                                intent = new Intent(getApplicationContext(), ClassicService.class);
                             intent.putExtra("remoteMacAddress", remoteMacAddress);
                             ContextCompat.startForegroundService(this, intent);
                             break;

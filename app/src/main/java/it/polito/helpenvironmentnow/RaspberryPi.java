@@ -75,20 +75,26 @@ public class RaspberryPi {
                 try {
                     InputStream socketInputStream = socket.getInputStream();
 
-                    String dhtMetaData = readTempHumMetaData(socketInputStream);
+                    Matcher matcher = new Matcher();
                     Parser parser = new Parser();
+
+                    String dhtMetaData = readTempHumMetaData(socketInputStream);
                     DhtMetaData parsedDhtMetaData = parser.parseDhtMetaData(dhtMetaData);
                     byte[] dhtFixedData = readFixedSensorsData(socketInputStream, parsedDhtMetaData);
-                    readAndSaveDhtData(socketInputStream, parsedDhtMetaData, dhtFixedData, location, myDb);
+                    readAndSaveDhtData(socketInputStream, parsedDhtMetaData, dhtFixedData, matcher, location, myDb);
 
                     String pmMetaData = readPmMetaData(socketInputStream);
                     PmMetaData parsedPmMetaData = parser.parsePmMetaData(pmMetaData);
-                    readAndSavePmData(socketInputStream, parsedPmMetaData, location, myDb);
+                    readAndSavePmData(socketInputStream, parsedPmMetaData, matcher, location, myDb);
 
                     OutputStream socketOutputStream = socket.getOutputStream();
                     byte[] ack = "ok".getBytes();
                     socketOutputStream.write(ack);
                     socketOutputStream.flush();
+
+                    // location is null only if MOVEMENT mode is on
+                    if(location == null)
+                        myDb.deletePositions(matcher.getMaxOverallTimestamp());
                 } catch (IOException e) {
                     Log.e(TAG, "Read or write to socket failed!");
                     e.printStackTrace();
@@ -126,10 +132,9 @@ public class RaspberryPi {
     // This method receives all DHT data from Raspberry Pi, parse them and save in local db
     // I save in db, and not in local buffer for scalable reasons(i.e. tens of MB of data received from Raspberry Pi)
     private void readAndSaveDhtData(InputStream socketInputStream, DhtMetaData dhtMetaData,
-                                    byte[] fixedDhtData, Location loc, MyDb myDb) throws IOException {
+                                    byte[] fixedDhtData, Matcher matcher, Location loc, MyDb myDb) throws IOException {
 
         Parser parser = new Parser();
-        Matcher matcher = new Matcher();
         int sensorIdTemperature = parser.parseSensorIdTemperature(fixedDhtData, dhtMetaData.getSensorIdLength());
         int sensorIdHumidity = parser.parseSensorIdHumidity(fixedDhtData, dhtMetaData.getSensorIdLength());
 
@@ -177,11 +182,10 @@ public class RaspberryPi {
 
     // This method receives all PM data from Raspberry Pi, parse them and save in local db
     // I save in db, and not in local buffer for scalable reasons(i.e. tens of MB of data received from Raspberry Pi)
-    private void readAndSavePmData(InputStream socketInputStream, PmMetaData pmMetaData,
+    private void readAndSavePmData(InputStream socketInputStream, PmMetaData pmMetaData, Matcher matcher,
                                    Location loc, MyDb myDb) throws IOException {
 
         Parser parser = new Parser();
-        Matcher matcher = new Matcher();
 
         final int N_MEASURES = 8000; // max measures to receive in one cycle, before parse them
         int measureLength = pmMetaData.getReadLength(); // is the measure length

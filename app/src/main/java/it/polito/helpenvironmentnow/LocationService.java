@@ -30,12 +30,14 @@ import it.polito.helpenvironmentnow.Storage.MyDb;
 import it.polito.helpenvironmentnow.Storage.Position;
 
 // This SERVICE is enabled when the user activates the MOVEMENT MODE and it is used to get
-// continuous location updates. The locations are saved into a local database; in this way
+// continuous location updates. The positions are saved into a local database; in this way
 // the MovementService can get the saved locations when it needs and can use them to match with the
 // measures taken from the Rasperry Pi using the timestamp as matching criteria.
 // The SERVICE runs indefinitely until the user stops it by disabling the MOVEMENT MODE.
 public class LocationService extends Service {
-    private String TAG = "LocService";
+
+    private final int SERVICE_ID = 3;
+    private String TAG = "LocService"; // String used for debug in Log.d method
 
     private Looper serviceLooper;
     private ServiceHandler serviceHandler;
@@ -69,7 +71,6 @@ public class LocationService extends Service {
             }
             locationClient.requestLocationUpdates(locationRequest, locationCallback, serviceLooper);
             myDb = new MyDb(getApplicationContext());
-            Log.d(TAG, "requestLocationUpdates executed");
         }
     }
 
@@ -79,11 +80,11 @@ public class LocationService extends Service {
         // the official guide: "Foreground services must display a Notification."
         Notification notification;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) // check if Android version is 8 or higher
-            notification = ServiceNotification.getMyOwnNotification(this, "HelpEnvironmentNow Service",
+            notification = ServiceNotification.getMyOwnNotification(this, "loc","HelpEnvironmentNow Service",
                     "MOVEMENT mode is ON", "Continuous location tracking is enabled"); // foreground service notification for Android 8+
         else
             notification =  new Notification(); // foreground service notification for Android 7.x or below
-        startForeground(1, notification);
+        startForeground(SERVICE_ID, notification);
 
         locationCallback = new LocationCallback() {
             @Override
@@ -95,8 +96,6 @@ public class LocationService extends Service {
                 List<Position> positions = new ArrayList<>();
                 for (Location location : locationResult.getLocations()) {
                     int timestamp = ((Long)TimeUnit.MILLISECONDS.toSeconds(location.getTime())).intValue();
-                    Log.d(TAG, "t:" + timestamp + " lat:" + location.getLatitude() + " long:"
-                            + location.getLongitude() + " alt:" + location.getAltitude());
                     Position currentPosition = new Position();
                     currentPosition.timestamp = timestamp;
                     currentPosition.latitude = location.getLatitude();
@@ -138,7 +137,6 @@ public class LocationService extends Service {
 
     @Override
     public void onDestroy() {
-        Log.d(TAG, "onDestroy called");
         locationClient.removeLocationUpdates(locationCallback);
         myDb.closeDb();
     }
