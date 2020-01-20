@@ -1,7 +1,6 @@
 package it.polito.helpenvironmentnow.Helper;
 
 import android.location.Location;
-import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,6 +31,7 @@ public class Matcher {
         if(location != null) {
             // CLASSIC MODE. I put the received location for all the measures received
             // from the Raspberry Pi
+
             String geoHash = LocationInfo.encodeLocation(location);
             double altitude = location.getAltitude();
             for(Measure measure : parsedMeasures) {
@@ -41,6 +41,7 @@ public class Matcher {
         } else {
             // MOVEMENT MODE. I have to match the measures with the recorded positions(that have been
             // previously inserted in the database by the LocationService)
+
             List<Integer> timestamps = new ArrayList<>(parsedMeasures.size());
             for(Measure measure : parsedMeasures) {
                 timestamps.add(measure.timestamp);
@@ -48,15 +49,20 @@ public class Matcher {
             Map<Integer, Position> positionsMap = getMapOfPositions(timestamps, myDb);
             if(positionsMap.size() > 0) {
                 int matchedTimestamp;
-                Position matchedPos;int nn = 0;
+                Position matchedPos;
                 for (Measure measure : parsedMeasures) {
-                    matchedTimestamp = searchMatch(positionsMap, measure.timestamp);if(matchedTimestamp==measure.timestamp) nn++;Log.d("MATCHER", "C " + measure.timestamp + " M " + matchedTimestamp);
+                    matchedTimestamp = searchMatch(positionsMap, measure.timestamp);
                     matchedPos = positionsMap.get(matchedTimestamp);
                     measure.geoHash = LocationInfo.encodeLocation(matchedPos.latitude, matchedPos.longitude);
                     measure.altitude = matchedPos.altitude;
                 }
-                Log.d("MATCHER", "Numero di match" + nn);
             } else {
+
+                // This case happens if the Position table doesn't contain any position for the
+                // the current measures. Normally this should not happen but it occurs if the user
+                // has started the Raspberry Pi a lot of time before to enable the MOVEMENT
+                // mode on the Android device(so no location have been registered) or if the
+                // Raspberry Pi and the Android device have very different datetime(big de-synchronization)
                 for (Measure measure : parsedMeasures) {
                     measure.geoHash = LocationInfo.encodeLocation(0.0, 0.0);
                     measure.altitude = 0.0;
