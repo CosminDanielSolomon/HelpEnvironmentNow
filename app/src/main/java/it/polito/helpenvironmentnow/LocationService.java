@@ -13,7 +13,6 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
-import android.util.Log;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -56,6 +55,15 @@ public class LocationService extends Service {
 
         @Override
         public void handleMessage(Message msg) {
+
+            // Check for permissions. If not granted, stop the service.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (getApplicationContext().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    stopSelf();
+                }
+            }
+
             // Set the location request in order to receive continuous location updates
             LocationRequest locationRequest = LocationRequest.create();
             locationRequest.setInterval(1000);
@@ -63,12 +71,6 @@ public class LocationService extends Service {
             locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
             locationRequest.setMaxWaitTime(5000);
             locationClient = LocationServices.getFusedLocationProviderClient(getApplicationContext());
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (getApplicationContext().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                        != PackageManager.PERMISSION_GRANTED) {
-                    return;
-                }
-            }
             locationClient.requestLocationUpdates(locationRequest, locationCallback, serviceLooper);
             myDb = new MyDb(getApplicationContext());
         }
@@ -138,7 +140,8 @@ public class LocationService extends Service {
     @Override
     public void onDestroy() {
         locationClient.removeLocationUpdates(locationCallback);
-        myDb.closeDb();
+        if(myDb != null)
+            myDb.closeDb();
     }
 
     @Override

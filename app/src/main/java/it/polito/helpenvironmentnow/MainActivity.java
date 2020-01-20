@@ -20,6 +20,8 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.google.android.material.snackbar.Snackbar;
+
 public class MainActivity extends AppCompatActivity {
 
     private String TAG = "MainActivity"; // This string is used as tag for debug
@@ -46,9 +48,17 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if(isChecked) {
-                    Intent intent = new Intent(getApplicationContext(), LocationService.class);
-                    ContextCompat.startForegroundService(getApplicationContext(), intent);
-                    movementMode = true;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        if (getApplicationContext().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                                != PackageManager.PERMISSION_GRANTED) {
+                            switchMovementMode.setChecked(false);
+                            showPermissionSnackbar();
+                        } else {
+                            Intent intent = new Intent(getApplicationContext(), LocationService.class);
+                            ContextCompat.startForegroundService(getApplicationContext(), intent);
+                            movementMode = true;
+                        }
+                    }
                 } else {
                     Intent intent = new Intent(getApplicationContext(), LocationService.class);
                     stopService(intent);
@@ -117,12 +127,15 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     final AlertDialog.Builder builder = new AlertDialog.Builder(this);
                     builder.setTitle("Functionality limited");
-                    builder.setMessage("Since location access has not been granted, this app will not be able to discover beacons when in the background.");
+                    builder.setMessage("Since location access has not been granted, this app will not be able to discover beacons.");
                     builder.setPositiveButton(android.R.string.ok, null);
                     builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
 
                         @Override
                         public void onDismiss(DialogInterface dialog) {
+
+                            showPermissionSnackbar();
+
                         }
 
                     });
@@ -139,5 +152,17 @@ public class MainActivity extends AppCompatActivity {
             movementRelativeLayout.setBackgroundColor(Color.parseColor("#068DE5"));
         else
             movementRelativeLayout.setBackgroundColor(Color.parseColor("#9E9E9E"));
+    }
+
+    private void showPermissionSnackbar() {
+        Snackbar permissionSnackbar = Snackbar.make(findViewById(R.id.mainConstraintLayout),
+                "Permission NOT granted!", Snackbar.LENGTH_INDEFINITE)
+                .setAction("GRANT IT", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        requestFineLocationPermission();
+                    }
+                });
+        permissionSnackbar.show();
     }
 }
