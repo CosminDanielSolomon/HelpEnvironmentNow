@@ -40,11 +40,10 @@ public class UploadWorker extends Worker {
         JsonBuilder jsonBuilder = new JsonBuilder();
         HeRestClient heRestClient = new HeRestClient(context);
 
-        long currentMeasures = 0;
         long totMeasures = myDb.getTotalMeasures();
         Log.d(TAG,"tot measures: " + totMeasures);
 
-        while(currentMeasures < totMeasures) {
+        while(totMeasures > 0) {
             List<Measure> measures = myDb.getSomeMeasures();
             Log.d(TAG,"List size: " + measures.size());
 
@@ -59,7 +58,7 @@ public class UploadWorker extends Worker {
                 return Result.retry();
             }
             myDb.deleteMeasures(measures);
-            currentMeasures += measures.size();
+            totMeasures = myDb.getTotalMeasures();
         }
 
         releaseResources(myDb);

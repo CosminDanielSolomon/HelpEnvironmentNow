@@ -7,6 +7,7 @@ import java.util.List;
 import it.polito.helpenvironmentnow.Storage.Measure;
 
 // This class is used to parse the stream of bytes received from the Raspberry Pi
+// The methods of this class are called inside the methods of the RaspberryPi class
 public class Parser {
 
     private static final int DHT_NUMBER_OF_READS_CHARS = 8; // the number of chars used to represent the length(in bytes) of number of dht reads

@@ -40,7 +40,6 @@ public class ClassicService extends IntentService implements MyLocationListener 
     @Override
     protected void onHandleIntent(Intent intent) {
 
-        /* readResult = true -> Data has been read correctly from Raspberry Pi */
         LocationInfo.getCurrentLocation(getApplicationContext(), this);
         /* Wait until the device current location is returned. When location is ready, locationCompleted(...)
          * is called and sets curLocationReady to true and so the while cycle will be interrupted

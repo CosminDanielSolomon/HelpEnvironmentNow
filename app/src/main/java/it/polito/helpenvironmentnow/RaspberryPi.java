@@ -24,17 +24,22 @@ import it.polito.helpenvironmentnow.Storage.MyDb;
 import static it.polito.helpenvironmentnow.Helper.Parser.DHT_META_DATA_CHARS;
 import static it.polito.helpenvironmentnow.Helper.Parser.PM_META_DATA_CHARS;
 
+// The main purpose of this class is to connect to the Raspberry Pi device, read the stream of bytes,
+// parse it to obtain each measure and associate it(matching) with a location. While receiving the
+// data, the measures are inserted into a local database.
+// At the end the Raspberry Pi is acknowledged and the socket connection is close.
 public class RaspberryPi {
 
     private String TAG = "RaspberryPi";
-    private static final int MAX_CONNNECTION_ATTEMPTS = 15; // the max number to retry establish bluetooth connection if fails
-    private static final int BLUETOOTH_MSECONDS_SLEEP = 3000; // milliseconds to sleep after connection fails
+    private static final int MAX_CONNECTION_ATTEMPTS = 15; // the max number to retry establish bluetooth connection if fails
+    private static final int BLUETOOTH_MSECONDS_SLEEP = 3000; // milliseconds to sleep if open connection fails
 
     private BluetoothAdapter bluetoothAdapter;
 
     private long totalInsertions = 0;
 
-    // This method returns the number of measures inserted into local database
+    // This method calls "connectAndReadFromRaspberry" and returns the number of measures received
+    // and inserted into local database
     public long connectAndRead(String remoteDeviceMacAddress, Location location, MyDb myDb) {
 
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -44,7 +49,9 @@ public class RaspberryPi {
         return totalInsertions;
     }
 
-    // This method receives all the measure from Raspberry Pi and acknowledges it if no exceptions occur
+    // This method receives the stream of bytes from the Raspberry Pi device, parses and saves the
+    // measures into local database, after obtaining(matching) the location for the measures.
+    // At the end it acknowledges the Raspberry Pi if no exceptions occur.
     private void connectAndReadFromRaspberry(String remoteDeviceMacAddress, Location location, MyDb myDb) {
 
         BluetoothSocket socket = getBluetoothSocketByReflection(remoteDeviceMacAddress);
@@ -52,14 +59,14 @@ public class RaspberryPi {
             int attempt = 1;
             if (bluetoothAdapter.isDiscovering())
                 bluetoothAdapter.cancelDiscovery();
-            while (attempt <= MAX_CONNNECTION_ATTEMPTS && !socket.isConnected()) {
+            while (attempt <= MAX_CONNECTION_ATTEMPTS && !socket.isConnected()) {
                 try {
                     Log.d(TAG, "Socket connect() attempt:" + attempt);
                     socket.connect();
                 } catch (IOException e) {
                     Log.d(TAG, "Socket connect() failed!");
                     e.printStackTrace();
-                    if (attempt < MAX_CONNNECTION_ATTEMPTS)
+                    if (attempt < MAX_CONNECTION_ATTEMPTS)
                         SystemClock.sleep(BLUETOOTH_MSECONDS_SLEEP); // sleep before retry to connect
                 }
                 attempt++;
@@ -73,12 +80,10 @@ public class RaspberryPi {
                     DhtMetaData parsedDhtMetaData = parser.parseDhtMetaData(dhtMetaData);
                     byte[] dhtFixedData = readFixedSensorsData(socketInputStream, parsedDhtMetaData);
                     readAndSaveDhtData(socketInputStream, parsedDhtMetaData, dhtFixedData, location, myDb);
-                    Log.d(TAG,"dht variable SUCCESS");
 
                     String pmMetaData = readPmMetaData(socketInputStream);
                     PmMetaData parsedPmMetaData = parser.parsePmMetaData(pmMetaData);
                     readAndSavePmData(socketInputStream, parsedPmMetaData, location, myDb);
-                    Log.d(TAG,"pm variable SUCCESS");
 
                     OutputStream socketOutputStream = socket.getOutputStream();
                     byte[] ack = "ok".getBytes();
@@ -99,8 +104,7 @@ public class RaspberryPi {
         }
     }
 
-    // This method reads the number of messages that follows and their size and sets the private
-    // fields of the object DhtMetaData
+    // This method reads the number of messages that follows and their size
     private String readTempHumMetaData(InputStream socketInputStream) throws IOException {
         byte[] buffer = new byte[DHT_META_DATA_CHARS];
 
@@ -135,7 +139,6 @@ public class RaspberryPi {
         byte[] data = new byte[BUFFER_SIZE];
 
         int totalMeasures = dhtMetaData.getNumberOfReads();
-        Log.d(TAG, "DHT:"+ totalMeasures +"measures");
         int currentMeasures = 0, size, result = 0;
         int n = N_MEASURES;
         while(currentMeasures < totalMeasures && result != -1) {
@@ -163,8 +166,7 @@ public class RaspberryPi {
         }
     }
 
-    // This method reads the number of messages that follows and their size and sets the private
-    // fields of the object PmMetaData
+    // This method reads the number of messages that follows and their size
     private String readPmMetaData(InputStream socketInputStream) throws IOException {
         byte[] buffer = new byte[PM_META_DATA_CHARS];
 
