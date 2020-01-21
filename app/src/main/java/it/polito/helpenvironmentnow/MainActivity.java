@@ -70,10 +70,16 @@ public class MainActivity extends AppCompatActivity {
                             switchMovementMode.setChecked(false);
                             showPermissionSnackbar();
                         } else {
-                            // Check if the device has enabled the needed geolocation settings
+                            // Check if the device has enabled the needed geolocation settings and start
+                            // LocationService if the user has the necessary settings
                             checkDeviceSettings();
                         }
+                    } else {
+                        // Check if the device has enabled the needed geolocation settings and start
+                        // LocationService if the user has the necessary settings
+                        checkDeviceSettings();
                     }
+
 
                 } else {
                     stopMovementService();
@@ -221,13 +227,7 @@ public class MainActivity extends AppCompatActivity {
     // Show a snackbar that inform the user that the settings for continuous tracking are not set
     private void showSettingsSnackbar() {
         Snackbar permissionSnackbar = Snackbar.make(findViewById(R.id.mainConstraintLayout),
-                "Location settings NOT set!", Snackbar.LENGTH_INDEFINITE)
-                .setAction("SET", new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        checkDeviceSettings();
-                    }
-                });
+                "Location settings NOT set!", Snackbar.LENGTH_LONG);
         permissionSnackbar.show();
     }
 
