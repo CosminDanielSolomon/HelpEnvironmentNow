@@ -13,6 +13,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
+import android.util.Log;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -64,12 +65,10 @@ public class LocationService extends Service {
                 }
             }
 
-            // Set the location request in order to receive continuous location updates
-            LocationRequest locationRequest = LocationRequest.create();
-            locationRequest.setInterval(1000);
-            locationRequest.setFastestInterval(1000);
-            locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-            locationRequest.setMaxWaitTime(5000);
+            // Get the location request from the MainActivity
+            LocationRequest locationRequest = (LocationRequest) msg.getData().get("request");
+
+            // Request location updates
             locationClient = LocationServices.getFusedLocationProviderClient(getApplicationContext());
             locationClient.requestLocationUpdates(locationRequest, locationCallback, serviceLooper);
             myDb = new MyDb(getApplicationContext());
@@ -105,6 +104,7 @@ public class LocationService extends Service {
                     currentPosition.altitude = location.getAltitude();
                     positions.add(currentPosition);
                 }
+                Log.d(TAG, "Positions: " + positions.size());
                 myDb.insertPositions(positions);
             }
         };
@@ -131,6 +131,7 @@ public class LocationService extends Service {
         // start ID so we know which request we're stopping when we finish the job
         Message msg = serviceHandler.obtainMessage();
         msg.arg1 = startId;
+        msg.setData(intent.getExtras());
         serviceHandler.sendMessage(msg);
 
         // If we get killed, after returning from here, restart
