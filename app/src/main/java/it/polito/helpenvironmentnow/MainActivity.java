@@ -106,7 +106,7 @@ public class MainActivity extends AppCompatActivity {
                     intent = new Intent(getApplicationContext(), MovementService.class);
                 else
                     intent = new Intent(getApplicationContext(), ClassicService.class);
-                intent.putExtra("remoteMacAddress", "B8:27:EB:C4:15:D6");
+                intent.putExtra("remoteMacAddress", "B8:27:EB:47:CF:BE");
                 ContextCompat.startForegroundService(getApplicationContext(), intent);
                 Log.d(TAG, "startService(...) performed");
             }

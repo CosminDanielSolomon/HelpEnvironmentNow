@@ -5,13 +5,16 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.location.Location;
 import android.os.SystemClock;
+import android.util.JsonReader;
 import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 import it.polito.helpenvironmentnow.Helper.DhtMetaData;
@@ -74,8 +77,9 @@ public class RaspberryPi {
             if(socket.isConnected()) {
                 try {
                     InputStream socketInputStream = socket.getInputStream();
-
-                    Matcher matcher = new Matcher();
+                    OutputStream socketOutputStream = socket.getOutputStream();
+                    readFromPi0(socketInputStream, socketOutputStream);
+                    /*Matcher matcher = new Matcher();
                     Parser parser = new Parser();
 
                     String dhtMetaData = readTempHumMetaData(socketInputStream);
@@ -87,14 +91,14 @@ public class RaspberryPi {
                     PmMetaData parsedPmMetaData = parser.parsePmMetaData(pmMetaData);
                     readAndSavePmData(socketInputStream, parsedPmMetaData, matcher, location, myDb);
 
-                    OutputStream socketOutputStream = socket.getOutputStream();
+
                     byte[] ack = "ok".getBytes();
                     socketOutputStream.write(ack);
                     socketOutputStream.flush();
 
                     // location is null only if MOVEMENT mode is on
                     if(location == null)
-                        myDb.deletePositions(matcher.getMaxOverallTimestamp());
+                        myDb.deletePositions(matcher.getMaxOverallTimestamp());*/
                 } catch (IOException e) {
                     Log.e(TAG, "Read or write to socket failed!");
                     e.printStackTrace();
@@ -244,10 +248,101 @@ public class RaspberryPi {
 
         do {
             resultRead = socketInputStream.read(buffer, bytesRead, size - bytesRead);
+            Log.d(TAG, "read: " + resultRead);
             if(resultRead != -1)
                 bytesRead += resultRead;
         } while(bytesRead < size && resultRead != -1);
 
         return bytesRead;
+    }
+
+    private void readFromPi0(InputStream socketInputStream, OutputStream socketOutputStream) throws IOException {
+        JsonReader reader = new JsonReader(new InputStreamReader(socketInputStream, StandardCharsets.UTF_8));
+
+        while (true) {
+            try {
+                reader.beginObject();
+                long n = readN(reader);
+                Log.d(TAG, "n: " + n);
+                List<Measure> m = readMeasures(reader);
+                reader.endObject();
+                if (m.size() == n) {
+                    Log.d(TAG, "Received:" + n + ". SEND ACK ->");
+                    byte[] ack = "ok".getBytes();
+                    socketOutputStream.write(ack);
+                    socketOutputStream.flush();
+                }
+            } catch (IOException e) {
+                reader.close();
+                throw e;
+            }
+        }
+
+    }
+
+    private long readN(JsonReader reader) throws IOException {
+        long n = 0;
+
+
+        String name = reader.nextName();
+        if (name.equals("n")) {
+            n = reader.nextLong();
+        }
+
+        return n;
+    }
+
+    private List<Measure> readMeasures(JsonReader reader) throws IOException {
+        List<Measure> measures = new ArrayList<>();
+
+        String name = reader.nextName();
+        if (name.equals("m")) {
+
+            int sensorId = 0;
+            int timestamp = 0;
+            double data = 0;
+            String geohash = "";
+            double altitude = 0;
+
+            reader.beginArray();
+            while (reader.hasNext()) {
+
+                reader.beginObject();
+                    name = reader.nextName();
+                    if (name.equals("sensorID")) {
+                        sensorId = reader.nextInt();
+                    }
+                    name = reader.nextName();
+                    if (name.equals("timestamp")) {
+                        timestamp = reader.nextInt();
+                    }
+                    name = reader.nextName();
+                    if (name.equals("data")) {
+                        data = reader.nextDouble();
+                    }
+                    name = reader.nextName();
+                    if (name.equals("geohash")) {
+                        geohash = reader.nextString();
+                    }
+                    name = reader.nextName();
+                    if (name.equals("altitude")) {
+                        altitude = reader.nextDouble();
+                    }
+                reader.endObject();
+                //Log.d(TAG, sensorId + " " + timestamp + " " + data + " " + geohash + " " + altitude);
+                Measure m = new Measure();
+                m.sensorId = sensorId;
+                m.timestamp = timestamp;
+                m.data = data;
+                m.geoHash = geohash;
+                m.altitude = altitude;
+
+                measures.add(m);
+            }
+            reader.endArray();
+
+        }
+
+        return measures;
     }
 }
