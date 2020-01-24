@@ -36,6 +36,7 @@ public class RaspberryPi {
     private String TAG = "RaspberryPi";
     private static final int MAX_CONNECTION_ATTEMPTS = 15; // the max number to retry establish bluetooth connection if fails
     private static final int BLUETOOTH_MSECONDS_SLEEP = 3000; // milliseconds to sleep if open connection fails
+    private final byte[] ACK_CHUNK = "ok".getBytes();
 
     private BluetoothAdapter bluetoothAdapter;
 
@@ -78,7 +79,7 @@ public class RaspberryPi {
                 try {
                     InputStream socketInputStream = socket.getInputStream();
                     OutputStream socketOutputStream = socket.getOutputStream();
-                    readFromPi0(socketInputStream, socketOutputStream);
+                    readMatchSaveChunks(socketInputStream, socketOutputStream, location, myDb);
                     /*Matcher matcher = new Matcher();
                     Parser parser = new Parser();
 
@@ -94,13 +95,13 @@ public class RaspberryPi {
 
                     byte[] ack = "ok".getBytes();
                     socketOutputStream.write(ack);
-                    socketOutputStream.flush();
+                    socketOutputStream.flush(); */
 
-                    // location is null only if MOVEMENT mode is on
-                    if(location == null)
-                        myDb.deletePositions(matcher.getMaxOverallTimestamp());*/
+                    // location is null only if MOVEMENT mode is on TODO DON'T remove this
+                    //if(location == null)
+                    //    myDb.deletePositions(matcher.getMaxOverallTimestamp());
                 } catch (IOException e) {
-                    Log.e(TAG, "Read or write to socket failed!");
+                    Log.e(TAG, "socket IOException during readMatchSaveChunks");
                     e.printStackTrace();
                 } finally {
                     try {
@@ -114,16 +115,18 @@ public class RaspberryPi {
         }
     }
 
+    // TODO remove this method
     // This method reads the number of messages that follows and their size
-    private String readTempHumMetaData(InputStream socketInputStream) throws IOException {
+    /*private String readTempHumMetaData(InputStream socketInputStream) throws IOException {
         byte[] buffer = new byte[DHT_META_DATA_CHARS];
 
         readSocketData(socketInputStream, buffer, DHT_META_DATA_CHARS);
 
         return new String(buffer, StandardCharsets.UTF_8);
-    }
+    }*/
 
-    private byte[] readFixedSensorsData(InputStream socketInputStream, DhtMetaData dhtMetaData) throws IOException {
+    // TODO remove this method
+    /*private byte[] readFixedSensorsData(InputStream socketInputStream, DhtMetaData dhtMetaData) throws IOException {
         final int sensorIds = 2; // one sensorId for temperature and one for humidity
         int totalDataSize = dhtMetaData.getSensorIdLength() * sensorIds;
         byte[] dhtFixedData = new byte[totalDataSize];
@@ -131,11 +134,12 @@ public class RaspberryPi {
         readSocketData(socketInputStream, dhtFixedData, totalDataSize);
 
         return dhtFixedData;
-    }
+    }*/
 
+    // TODO remove
     // This method receives all DHT data from Raspberry Pi, parse them and save in local db
     // I save in db, and not in local buffer for scalable reasons(i.e. tens of MB of data received from Raspberry Pi)
-    private void readAndSaveDhtData(InputStream socketInputStream, DhtMetaData dhtMetaData,
+    /*private void readAndSaveDhtData(InputStream socketInputStream, DhtMetaData dhtMetaData,
                                     byte[] fixedDhtData, Matcher matcher, Location loc, MyDb myDb) throws IOException {
 
         Parser parser = new Parser();
@@ -173,20 +177,22 @@ public class RaspberryPi {
             }
 
         }
-    }
+    }*/
 
+    // TODO remove
     // This method reads the number of messages that follows and their size
-    private String readPmMetaData(InputStream socketInputStream) throws IOException {
+    /*private String readPmMetaData(InputStream socketInputStream) throws IOException {
         byte[] buffer = new byte[PM_META_DATA_CHARS];
 
         readSocketData(socketInputStream, buffer, PM_META_DATA_CHARS);
 
         return new String(buffer, StandardCharsets.UTF_8);
-    }
+    }*/
 
+    // TODO remove
     // This method receives all PM data from Raspberry Pi, parse them and save in local db
     // I save in db, and not in local buffer for scalable reasons(i.e. tens of MB of data received from Raspberry Pi)
-    private void readAndSavePmData(InputStream socketInputStream, PmMetaData pmMetaData, Matcher matcher,
+    /*private void readAndSavePmData(InputStream socketInputStream, PmMetaData pmMetaData, Matcher matcher,
                                    Location loc, MyDb myDb) throws IOException {
 
         Parser parser = new Parser();
@@ -220,7 +226,7 @@ public class RaspberryPi {
             }
 
         }
-    }
+    }*/
 
     private BluetoothSocket getBluetoothSocketByReflection(String remoteDeviceMacAddress) {
         BluetoothDevice remoteDevice;
@@ -242,8 +248,9 @@ public class RaspberryPi {
         return socket;
     }
 
+    // TODO remove this method
     // Low level method that reads "size" bytes or fails and returns -1
-    private int readSocketData(InputStream socketInputStream, byte[] buffer, int size) throws IOException {
+    /*private int readSocketData(InputStream socketInputStream, byte[] buffer, int size) throws IOException {
         int resultRead, bytesRead = 0;
 
         do {
@@ -254,24 +261,42 @@ public class RaspberryPi {
         } while(bytesRead < size && resultRead != -1);
 
         return bytesRead;
-    }
+    }*/
 
-    private void readFromPi0(InputStream socketInputStream, OutputStream socketOutputStream) throws IOException {
+    private void readMatchSaveChunks(InputStream socketInputStream, OutputStream socketOutputStream,
+                                     Location loc, MyDb myDb) throws IOException {
         JsonReader reader = new JsonReader(new InputStreamReader(socketInputStream, StandardCharsets.UTF_8));
-
+        reader.setLenient(true); // it is needed in order to avoid MalformedJsonException before reading the second chunk and the others that follow
+        Matcher matcher = new Matcher();
+        // this loop is interrupted by an IOException when the server has finished to send data and closes the socket or for any other IOException during data transfer
         while (true) {
             try {
-                reader.beginObject();
-                long n = readN(reader);
-                Log.d(TAG, "n: " + n);
-                List<Measure> m = readMeasures(reader);
-                reader.endObject();
-                if (m.size() == n) {
-                    Log.d(TAG, "Received:" + n + ". SEND ACK ->");
-                    byte[] ack = "ok".getBytes();
-                    socketOutputStream.write(ack);
-                    socketOutputStream.flush();
+
+                /* TODO remove this block
+                // long n = readN(reader); // n is the number of measures in the chunks that follows
+                // Log.d(TAG, "n: " + n);
+                */
+                List<Measure> measures = readChunk(reader);
+                // associate position to each measure
+                matcher.matchMeasuresAndPositions(loc, measures, myDb);
+                // save measures into local database
+                myDb.insertMeasures(measures);
+                totalInsertions += measures.size();
+
+                // TODO remove ---
+                int min = Integer.MAX_VALUE, max = 0;
+                for(Measure me : measures) {
+                    if(me.timestamp < min)
+                        min = me.timestamp;
+                    if(me.timestamp > max)
+                        max = me.timestamp;
                 }
+                Log.d(TAG, "min: " + min +" max: " + max);
+                // TODO remove ---
+                // send ACK for the received chunk to the server
+                socketOutputStream.write(ACK_CHUNK);
+                socketOutputStream.flush();
+
             } catch (IOException e) {
                 reader.close();
                 throw e;
@@ -280,9 +305,9 @@ public class RaspberryPi {
 
     }
 
-    private long readN(JsonReader reader) throws IOException {
+    // TODO remove this method
+    /*private long readN(JsonReader reader) throws IOException {
         long n = 0;
-
 
         String name = reader.nextName();
         if (name.equals("n")) {
@@ -290,21 +315,22 @@ public class RaspberryPi {
         }
 
         return n;
-    }
+    }*/
 
-    private List<Measure> readMeasures(JsonReader reader) throws IOException {
+    // A chunk is a JSON format containing an array of measures
+    private List<Measure> readChunk(JsonReader reader) throws IOException {
         List<Measure> measures = new ArrayList<>();
 
+        reader.beginObject(); // consumes the first '{' of the json object
         String name = reader.nextName();
         if (name.equals("m")) {
-
             int sensorId = 0;
             int timestamp = 0;
             double data = 0;
             String geohash = "";
             double altitude = 0;
 
-            reader.beginArray();
+            reader.beginArray(); // consumes the first '[' of the json array
             while (reader.hasNext()) {
 
                 reader.beginObject();
@@ -329,17 +355,17 @@ public class RaspberryPi {
                         altitude = reader.nextDouble();
                     }
                 reader.endObject();
-                //Log.d(TAG, sensorId + " " + timestamp + " " + data + " " + geohash + " " + altitude);
+                //Log.d(TAG, sensorId + " " + timestamp + " " + data + " " + geohash + " " + altitude); // TODO remove this line
                 Measure m = new Measure();
                 m.sensorId = sensorId;
                 m.timestamp = timestamp;
                 m.data = data;
                 m.geoHash = geohash;
                 m.altitude = altitude;
-
                 measures.add(m);
             }
             reader.endArray();
+            reader.endObject();
 
         }
 
