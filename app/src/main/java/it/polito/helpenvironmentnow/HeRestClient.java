@@ -17,7 +17,7 @@ import cz.msebera.android.httpclient.entity.StringEntity;
 public class HeRestClient {
 
     // Server URL
-    private String ipAddress = "10.1.23.126";
+    private String ipAddress = "192.168.137.1";
     private String port = "8443";
     private String HE_WEB_SERVICE_URL = "https://" + ipAddress + ":" + port + "/HelpEnvironment/helpenvironment/he/measures";
 

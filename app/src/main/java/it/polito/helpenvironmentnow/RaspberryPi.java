@@ -99,7 +99,7 @@ public class RaspberryPi {
 
                     // location is null only if MOVEMENT mode is on TODO DON'T remove this
                     //if(location == null)
-                    //    myDb.deletePositions(matcher.getMaxOverallTimestamp());
+                        //myDb.deletePositions(matcher.getMaxOverallTimestamp());
                 } catch (IOException e) {
                     Log.e(TAG, "socket IOException during readMatchSaveChunks");
                     e.printStackTrace();
@@ -271,11 +271,6 @@ public class RaspberryPi {
         // this loop is interrupted by an IOException when the server has finished to send data and closes the socket or for any other IOException during data transfer
         while (true) {
             try {
-
-                /* TODO remove this block
-                // long n = readN(reader); // n is the number of measures in the chunks that follows
-                // Log.d(TAG, "n: " + n);
-                */
                 List<Measure> measures = readChunk(reader);
                 // associate position to each measure
                 matcher.matchMeasuresAndPositions(loc, measures, myDb);
@@ -304,18 +299,6 @@ public class RaspberryPi {
         }
 
     }
-
-    // TODO remove this method
-    /*private long readN(JsonReader reader) throws IOException {
-        long n = 0;
-
-        String name = reader.nextName();
-        if (name.equals("n")) {
-            n = reader.nextLong();
-        }
-
-        return n;
-    }*/
 
     // A chunk is a JSON format containing an array of measures
     private List<Measure> readChunk(JsonReader reader) throws IOException {
@@ -346,22 +329,15 @@ public class RaspberryPi {
                     if (name.equals("data")) {
                         data = reader.nextDouble();
                     }
-                    name = reader.nextName();
-                    if (name.equals("geohash")) {
-                        geohash = reader.nextString();
-                    }
-                    name = reader.nextName();
-                    if (name.equals("altitude")) {
-                        altitude = reader.nextDouble();
-                    }
                 reader.endObject();
-                //Log.d(TAG, sensorId + " " + timestamp + " " + data + " " + geohash + " " + altitude); // TODO remove this line
+
                 Measure m = new Measure();
                 m.sensorId = sensorId;
                 m.timestamp = timestamp;
                 m.data = data;
                 m.geoHash = geohash;
                 m.altitude = altitude;
+
                 measures.add(m);
             }
             reader.endArray();

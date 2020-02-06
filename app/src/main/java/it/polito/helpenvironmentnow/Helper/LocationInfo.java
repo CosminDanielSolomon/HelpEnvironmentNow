@@ -15,9 +15,9 @@ import com.google.android.gms.tasks.OnSuccessListener;
 
 public class LocationInfo {
 
-    private static final double defaultAltitude = 245; // medium altitude of Torino city
-    private static final double defaultLatitude = 45.062435; // latitude near Politecnico di Torino
-    private static final double defaultLongitude = 7.662321; // longitude near Politecnico di Torino
+    private static final double defaultAltitude = 0.0;
+    private static final double defaultLatitude = 0.0;
+    private static final double defaultLongitude = 0.0;
 
     public static void getCurrentLocation(Context context, final MyLocationListener myLocationListener) {
         FusedLocationProviderClient locationClient = LocationServices.getFusedLocationProviderClient(context);

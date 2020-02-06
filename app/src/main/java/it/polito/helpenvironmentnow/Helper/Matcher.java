@@ -14,7 +14,12 @@ import it.polito.helpenvironmentnow.Storage.Position;
 
 // This class is used to associate a geographical position to the measures received from the Raspberry Pi
 public class Matcher {
+    private final double defaultAltitude = 0.0;
+    private final double defaultLatitude = 0.0;
+    private final double defaultLongitude = 0.0;
 
+    private final int MAX_GAP = 30; // the max number of seconds acceptable for the match between measure timestamp and position timestamp
+    private final int NO_MATCH = -1; // value that means that it was not possible to find a match with a position for the measure
     // This field is only used for the MOVEMENT mode. It is used to save the maximum timestamp that
     // is encountered during the reading of data from the Raspberry Pi device.
     // At the end of the reading and matching phase all positions saved in the local database('Position' table)
@@ -52,9 +57,21 @@ public class Matcher {
                 Position matchedPos;
                 for (Measure measure : parsedMeasures) {
                     matchedTimestamp = searchMatch(positionsMap, measure.timestamp);
-                    matchedPos = positionsMap.get(matchedTimestamp);
-                    measure.geoHash = LocationInfo.encodeLocation(matchedPos.latitude, matchedPos.longitude);
-                    measure.altitude = matchedPos.altitude;
+                    if(matchedTimestamp != NO_MATCH) {
+                        matchedPos = positionsMap.get(matchedTimestamp);
+                        if (matchedPos != null) {
+                            measure.geoHash = LocationInfo.encodeLocation(matchedPos.latitude, matchedPos.longitude);
+                            measure.altitude = matchedPos.altitude;
+                        } else {
+                            // normally this should not happen because the matchedTimestamp is always included in positionMap
+                            // but AndroidStudio complains about it could be a null pointer
+                            measure.geoHash = LocationInfo.encodeLocation(defaultLatitude, defaultLongitude);
+                            measure.altitude = defaultAltitude;
+                        }
+                    } else {
+                        measure.geoHash = LocationInfo.encodeLocation(defaultLatitude, defaultLongitude);
+                        measure.altitude = defaultAltitude;
+                    }
                 }
             } else {
 
@@ -64,8 +81,8 @@ public class Matcher {
                 // mode on the Android device(so no location have been registered) or if the
                 // Raspberry Pi and the Android device have very different datetime(big de-synchronization)
                 for (Measure measure : parsedMeasures) {
-                    measure.geoHash = LocationInfo.encodeLocation(0.0, 0.0);
-                    measure.altitude = 0.0;
+                    measure.geoHash = LocationInfo.encodeLocation(defaultLatitude, defaultLongitude);
+                    measure.altitude = defaultAltitude;
                 }
             }
         }
@@ -76,6 +93,7 @@ public class Matcher {
         return maxOverallTimestamp;
     }
 
+    // Gets from the local db all the positions that have been registered
     private Map<Integer, Position> getMapOfPositions(List<Integer> timestamps, MyDb myDb) {
         int minT = Collections.min(timestamps);
         int maxT = Collections.max(timestamps);
@@ -91,8 +109,9 @@ public class Matcher {
         return positionsMap;
     }
 
+    // returns the timestamp of the matched position or NO_MATCH if no position available for the measure
     private int searchMatch(Map<Integer, Position> positionsMap, int currentTimestamp) {
-        int matchedTimestamp = 0;
+        int matchedTimestamp = NO_MATCH;
 
         if (positionsMap.containsKey(currentTimestamp)) {
 
@@ -102,17 +121,14 @@ public class Matcher {
         } else {
 
             // APPROXIMATE MATCH - search for nearest position based on timestamp
-            boolean match = false;
             int lowerTimestamp, upperTimestamp, gap = 1;
-            while (!match) {
+            while (matchedTimestamp == NO_MATCH && gap <= MAX_GAP) {
                 lowerTimestamp = currentTimestamp - gap;
                 upperTimestamp = currentTimestamp + gap;
                 if (positionsMap.containsKey(lowerTimestamp)) {
                     matchedTimestamp = lowerTimestamp;
-                    match = true;
                 } else if (positionsMap.containsKey(upperTimestamp)) {
                     matchedTimestamp = upperTimestamp;
-                    match = true;
                 } else {
                     gap++;
                 }
