@@ -8,9 +8,12 @@ import android.location.LocationManager;
 import android.os.Build;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.fonfon.geohash.GeoHash;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 
 public class LocationInfo {
@@ -26,24 +29,36 @@ public class LocationInfo {
                 return;
             }
         }
-        locationClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
-            @Override
-            public void onSuccess(Location location) {
-                // Got last known location. In some rare situations this can be null.
-                if (location != null) {
-                    if(!location.hasAltitude())
-                        location.setAltitude(defaultAltitude);
-                    myLocationListener.locationCompleted(location); // fires the callback in ClassicService
-                } else {
-                    Location defaultLocation = new Location(LocationManager.GPS_PROVIDER);
-                    Log.d("LocationInfo", "lat" + defaultLocation.getLatitude()+"long"+defaultLocation.getLongitude()+"alt"+defaultLocation.getAltitude());
-                    defaultLocation.setLatitude(defaultLatitude);
-                    defaultLocation.setLongitude(defaultLongitude);
-                    defaultLocation.setAltitude(defaultAltitude);
-                    myLocationListener.locationCompleted(defaultLocation); // fires the callback in ClassicService
-                }
-            }
-        });
+        locationClient.getLastLocation()
+                .addOnSuccessListener(new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        // Got last known location. In some rare situations this can be null.
+                        if (location != null) {
+                            if(!location.hasAltitude())
+                                location.setAltitude(defaultAltitude);
+                            myLocationListener.locationCompleted(location); // fires the callback in calling Service
+                        } else {
+                            Location defaultLocation = new Location(LocationManager.GPS_PROVIDER);
+                            Log.d("LocationInfo", "lat" + defaultLocation.getLatitude()+"long"+defaultLocation.getLongitude()+"alt"+defaultLocation.getAltitude());
+                            defaultLocation.setLatitude(defaultLatitude);
+                            defaultLocation.setLongitude(defaultLongitude);
+                            defaultLocation.setAltitude(defaultAltitude);
+                            myLocationListener.locationCompleted(defaultLocation); // fires the callback in calling Service
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Location defaultLocation = new Location(LocationManager.GPS_PROVIDER);
+                        Log.d("LocationInfo", "lat" + defaultLocation.getLatitude()+"long"+defaultLocation.getLongitude()+"alt"+defaultLocation.getAltitude());
+                        defaultLocation.setLatitude(defaultLatitude);
+                        defaultLocation.setLongitude(defaultLongitude);
+                        defaultLocation.setAltitude(defaultAltitude);
+                        myLocationListener.locationCompleted(defaultLocation); // fires the callback in calling Service
+                    }
+                });
     }
 
     public static String encodeLocation(Location location) {

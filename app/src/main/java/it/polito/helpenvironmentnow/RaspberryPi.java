@@ -119,7 +119,7 @@ public class RaspberryPi {
             try {
                 List<Measure> measures = readChunk(reader);
                 // associate position to each measure
-                matcher.matchMeasuresAndPositions(loc, measures, myDb);
+                matcher.matchMeasuresAndPositions(loc, measures);
                 // save measures into local database
                 myDb.insertMeasures(measures);
                 totalInsertions += measures.size();

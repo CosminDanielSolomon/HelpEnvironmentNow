@@ -40,7 +40,6 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
     public void onCreate() {
         super.onCreate();
         Log.d(TAG, "App started up");
-        initializeMovementMode();
         beaconManager = BeaconManager.getInstanceForApplication(this);
         beaconManager.setRegionStatePersistenceEnabled(false);
         // To detect proprietary beacons, you must add a line like below corresponding to your beacon
@@ -90,13 +89,7 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
                     if(myBeaconNamespaceId.equals(detectedNamespaceId) && myBeaconInstanceId.equals(detectedInstanceId)) {
                         String remoteMacAddress = beacon.getBluetoothAddress();
                         if(remoteMacAddress != null) {
-                            SharedPreferences sharedPref = getSharedPreferences(getString(R.string.config_file), Context.MODE_PRIVATE);
-                            boolean movementMode = sharedPref.getBoolean(getString(R.string.MODE), false);
-                            Intent intent;
-                            if(movementMode)
-                                intent = new Intent(getApplicationContext(), MovementService.class);
-                            else
-                                intent = new Intent(getApplicationContext(), ClassicService.class);
+                            Intent intent = new Intent(getApplicationContext(), ClassicService.class);
                             intent.putExtra("remoteMacAddress", remoteMacAddress);
                             ContextCompat.startForegroundService(this, intent);
                             break;
@@ -111,15 +104,5 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
     @Override
     public Configuration getWorkManagerConfiguration() {
         return new Configuration.Builder().setExecutor(Executors.newSingleThreadExecutor()).build();
-    }
-
-    private void initializeMovementMode() {
-        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(
-                getString(R.string.config_file), Context.MODE_PRIVATE);
-        if(!sharedPref.contains(getString(R.string.MODE))) {
-            SharedPreferences.Editor editor = sharedPref.edit();
-            editor.putBoolean(getString(R.string.MODE), false);
-            editor.commit();
-        }
     }
 }
