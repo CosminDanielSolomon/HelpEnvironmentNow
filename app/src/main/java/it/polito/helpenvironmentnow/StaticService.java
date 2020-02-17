@@ -51,13 +51,13 @@ public class StaticService extends IntentService /*implements MyLocationListener
 //            SystemClock.sleep(WAIT_LOCATION_MS);
 //        }
 
-        // Open the db connection. It will be used inside Raspberry Pi object
+        // Open the db connection. It will be used inside RaspberryPi object
         MyDb myDb = new MyDb(getApplicationContext());
 
-        /* the remote device is the the Raspberry Pi */
+        /* the remote device is the the Raspberry Pi device */
         String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
         RaspberryPi rPi = new RaspberryPi();
-        long insertions = rPi.connectAndRead(remoteDeviceMacAddress, curLocation, myDb);
+        long insertions = rPi.connectAndRead(remoteDeviceMacAddress, myDb);
         // Close the db connection as it is not used anymore
         myDb.closeDb();
         if(insertions > 0) {

@@ -3,7 +3,6 @@ package it.polito.helpenvironmentnow;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
-import android.location.Location;
 import android.os.SystemClock;
 import android.util.JsonReader;
 import android.util.Log;
@@ -17,15 +16,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import it.polito.helpenvironmentnow.Helper.DhtMetaData;
-import it.polito.helpenvironmentnow.Helper.Matcher;
-import it.polito.helpenvironmentnow.Helper.Parser;
-import it.polito.helpenvironmentnow.Helper.PmMetaData;
 import it.polito.helpenvironmentnow.Storage.Measure;
 import it.polito.helpenvironmentnow.Storage.MyDb;
-
-import static it.polito.helpenvironmentnow.Helper.Parser.DHT_META_DATA_CHARS;
-import static it.polito.helpenvironmentnow.Helper.Parser.PM_META_DATA_CHARS;
 
 // The main purpose of this class is to connect to the Raspberry Pi device, read the stream of bytes,
 // parse it to obtain each measure and associate it(matching) with a location. While receiving the
@@ -34,6 +26,7 @@ import static it.polito.helpenvironmentnow.Helper.Parser.PM_META_DATA_CHARS;
 public class RaspberryPi {
 
     private String TAG = "RaspberryPi";
+    private static final int STATIC_CHANNEL = 1;
     private static final int MAX_CONNECTION_ATTEMPTS = 15; // the max number to retry establish bluetooth connection if fails
     private static final int BLUETOOTH_MSECONDS_SLEEP = 3000; // milliseconds to sleep if open connection fails
     private final byte[] ACK_CHUNK = "ok".getBytes();
@@ -44,11 +37,11 @@ public class RaspberryPi {
 
     // This method calls "connectAndReadFromRaspberry" and returns the number of measures received
     // and inserted into local database
-    public long connectAndRead(String remoteDeviceMacAddress, Location location, MyDb myDb) {
+    public long connectAndRead(String remoteDeviceMacAddress, MyDb myDb) {
 
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter != null)
-            connectAndReadFromRaspberry(remoteDeviceMacAddress, location, myDb);
+            connectAndReadFromRaspberry(remoteDeviceMacAddress, myDb);
 
         return totalInsertions;
     }
@@ -56,7 +49,7 @@ public class RaspberryPi {
     // This method receives the stream of bytes from the Raspberry Pi device, parses and saves the
     // measures into local database, after obtaining(matching) the location for the measures.
     // At the end it acknowledges the Raspberry Pi if no exceptions occur.
-    private void connectAndReadFromRaspberry(String remoteDeviceMacAddress, Location location, MyDb myDb) {
+    private void connectAndReadFromRaspberry(String remoteDeviceMacAddress, MyDb myDb) {
 
         BluetoothSocket socket = getBluetoothSocketByReflection(remoteDeviceMacAddress);
         if(socket != null) {
@@ -79,29 +72,9 @@ public class RaspberryPi {
                 try {
                     InputStream socketInputStream = socket.getInputStream();
                     OutputStream socketOutputStream = socket.getOutputStream();
-                    readMatchSaveChunks(socketInputStream, socketOutputStream, location, myDb);
-                    /*Matcher matcher = new Matcher();
-                    Parser parser = new Parser();
-
-                    String dhtMetaData = readTempHumMetaData(socketInputStream);
-                    DhtMetaData parsedDhtMetaData = parser.parseDhtMetaData(dhtMetaData);
-                    byte[] dhtFixedData = readFixedSensorsData(socketInputStream, parsedDhtMetaData);
-                    readAndSaveDhtData(socketInputStream, parsedDhtMetaData, dhtFixedData, matcher, location, myDb);
-
-                    String pmMetaData = readPmMetaData(socketInputStream);
-                    PmMetaData parsedPmMetaData = parser.parsePmMetaData(pmMetaData);
-                    readAndSavePmData(socketInputStream, parsedPmMetaData, matcher, location, myDb);
-
-
-                    byte[] ack = "ok".getBytes();
-                    socketOutputStream.write(ack);
-                    socketOutputStream.flush(); */
-
-                    // location is null only if MOVEMENT mode is on TODO DON'T remove this
-                    //if(location == null)
-                        //myDb.deletePositions(matcher.getMaxOverallTimestamp());
+                    readSaveChunks(socketInputStream, socketOutputStream, myDb);
                 } catch (IOException e) {
-                    Log.e(TAG, "socket IOException during readMatchSaveChunks");
+                    Log.e(TAG, "socket IOException during readSaveChunks");
                     e.printStackTrace();
                 } finally {
                     try {
@@ -115,119 +88,6 @@ public class RaspberryPi {
         }
     }
 
-    // TODO remove this method
-    // This method reads the number of messages that follows and their size
-    /*private String readTempHumMetaData(InputStream socketInputStream) throws IOException {
-        byte[] buffer = new byte[DHT_META_DATA_CHARS];
-
-        readSocketData(socketInputStream, buffer, DHT_META_DATA_CHARS);
-
-        return new String(buffer, StandardCharsets.UTF_8);
-    }*/
-
-    // TODO remove this method
-    /*private byte[] readFixedSensorsData(InputStream socketInputStream, DhtMetaData dhtMetaData) throws IOException {
-        final int sensorIds = 2; // one sensorId for temperature and one for humidity
-        int totalDataSize = dhtMetaData.getSensorIdLength() * sensorIds;
-        byte[] dhtFixedData = new byte[totalDataSize];
-
-        readSocketData(socketInputStream, dhtFixedData, totalDataSize);
-
-        return dhtFixedData;
-    }*/
-
-    // TODO remove
-    // This method receives all DHT data from Raspberry Pi, parse them and save in local db
-    // I save in db, and not in local buffer for scalable reasons(i.e. tens of MB of data received from Raspberry Pi)
-    /*private void readAndSaveDhtData(InputStream socketInputStream, DhtMetaData dhtMetaData,
-                                    byte[] fixedDhtData, Matcher matcher, Location loc, MyDb myDb) throws IOException {
-
-        Parser parser = new Parser();
-        int sensorIdTemperature = parser.parseSensorIdTemperature(fixedDhtData, dhtMetaData.getSensorIdLength());
-        int sensorIdHumidity = parser.parseSensorIdHumidity(fixedDhtData, dhtMetaData.getSensorIdLength());
-
-        final int N_MEASURES = 1000; // max measures to receive in one cycle, before parse them
-        int measureLength = dhtMetaData.getReadLength(); // is the measure length in bytes
-        final int BUFFER_SIZE = N_MEASURES * measureLength; // size of the local buffer
-        byte[] data = new byte[BUFFER_SIZE];
-
-        int totalMeasures = dhtMetaData.getNumberOfReads();
-        int currentMeasures = 0, size, result = 0;
-        int n = N_MEASURES;
-        while(currentMeasures < totalMeasures && result != -1) {
-
-            if((totalMeasures - currentMeasures) < N_MEASURES)
-                n = totalMeasures - currentMeasures;
-
-            size = n * measureLength;
-            result = readSocketData(socketInputStream, data, size);
-            if(result == size) {
-                currentMeasures += n;
-
-                // I parse the stream of bytes and I build Measure objects
-                List<Measure> parsedMeasures = parser.parseDhtData(sensorIdTemperature,
-                        sensorIdHumidity, data, n, dhtMetaData);
-                // I assign position to each measure
-                matcher.matchMeasuresAndPositions(loc, parsedMeasures, myDb);
-                // I save measures into local database
-                myDb.insertMeasures(parsedMeasures);
-                totalInsertions += n * 2;
-            } else {
-                result = -1;
-            }
-
-        }
-    }*/
-
-    // TODO remove
-    // This method reads the number of messages that follows and their size
-    /*private String readPmMetaData(InputStream socketInputStream) throws IOException {
-        byte[] buffer = new byte[PM_META_DATA_CHARS];
-
-        readSocketData(socketInputStream, buffer, PM_META_DATA_CHARS);
-
-        return new String(buffer, StandardCharsets.UTF_8);
-    }*/
-
-    // TODO remove
-    // This method receives all PM data from Raspberry Pi, parse them and save in local db
-    // I save in db, and not in local buffer for scalable reasons(i.e. tens of MB of data received from Raspberry Pi)
-    /*private void readAndSavePmData(InputStream socketInputStream, PmMetaData pmMetaData, Matcher matcher,
-                                   Location loc, MyDb myDb) throws IOException {
-
-        Parser parser = new Parser();
-
-        final int N_MEASURES = 8000; // max measures to receive in one cycle, before parse them
-        int measureLength = pmMetaData.getReadLength(); // is the measure length
-        final int BUFFER_SIZE = N_MEASURES * measureLength; // size of the local buffer
-        byte[] data = new byte[BUFFER_SIZE];
-
-        int totalMeasures = pmMetaData.getNumberOfReads();
-        int currentMeasures = 0, size, result = 0;
-        int n = N_MEASURES;
-        while(currentMeasures < totalMeasures && result != -1) {
-
-            if((totalMeasures - currentMeasures) < N_MEASURES)
-                n = totalMeasures - currentMeasures;
-
-            size = n * measureLength;
-            result = readSocketData(socketInputStream, data, size);
-            if(result == size) {
-                currentMeasures += n;
-
-                List<Measure> parsedMeasures = parser.parsePmData(data, n, pmMetaData);
-                // I assign position to each measure
-                matcher.matchMeasuresAndPositions(loc, parsedMeasures, myDb);
-                // I save measures into local database
-                myDb.insertMeasures(parsedMeasures);
-                totalInsertions += n * 2;
-            } else {
-                result = -1;
-            }
-
-        }
-    }*/
-
     private BluetoothSocket getBluetoothSocketByReflection(String remoteDeviceMacAddress) {
         BluetoothDevice remoteDevice;
         BluetoothSocket socket = null;
@@ -235,7 +95,7 @@ public class RaspberryPi {
             remoteDevice = bluetoothAdapter.getRemoteDevice(remoteDeviceMacAddress);
             try {
                 socket = (BluetoothSocket) BluetoothDevice.class.getMethod(
-                        "createInsecureRfcommSocket", int.class).invoke(remoteDevice, 1);
+                        "createInsecureRfcommSocket", int.class).invoke(remoteDevice, STATIC_CHANNEL);
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             } catch (InvocationTargetException e) {
@@ -248,32 +108,14 @@ public class RaspberryPi {
         return socket;
     }
 
-    // TODO remove this method
-    // Low level method that reads "size" bytes or fails and returns -1
-    /*private int readSocketData(InputStream socketInputStream, byte[] buffer, int size) throws IOException {
-        int resultRead, bytesRead = 0;
-
-        do {
-            resultRead = socketInputStream.read(buffer, bytesRead, size - bytesRead);
-            Log.d(TAG, "read: " + resultRead);
-            if(resultRead != -1)
-                bytesRead += resultRead;
-        } while(bytesRead < size && resultRead != -1);
-
-        return bytesRead;
-    }*/
-
-    private void readMatchSaveChunks(InputStream socketInputStream, OutputStream socketOutputStream,
-                                     Location loc, MyDb myDb) throws IOException {
+    private void readSaveChunks(InputStream socketInputStream, OutputStream socketOutputStream,
+                                MyDb myDb) throws IOException {
         JsonReader reader = new JsonReader(new InputStreamReader(socketInputStream, StandardCharsets.UTF_8));
         reader.setLenient(true); // it is needed in order to avoid MalformedJsonException before reading the second chunk and the others that follow
-        Matcher matcher = new Matcher();
         // this loop is interrupted by an IOException when the server has finished to send data and closes the socket or for any other IOException during data transfer
         while (true) {
             try {
                 List<Measure> measures = readChunk(reader);
-                // associate position to each measure
-                matcher.matchMeasuresAndPositions(loc, measures, myDb);
                 // save measures into local database
                 myDb.insertMeasures(measures);
                 totalInsertions += measures.size();
@@ -328,6 +170,14 @@ public class RaspberryPi {
                     name = reader.nextName();
                     if (name.equals("data")) {
                         data = reader.nextDouble();
+                    }
+                    name = reader.nextName();
+                    if (name.equals("geohash")) {
+                        geohash = reader.nextString();
+                    }
+                    name = reader.nextName();
+                    if (name.equals("altitude")) {
+                        altitude = reader.nextDouble();
                     }
                 reader.endObject();
 
