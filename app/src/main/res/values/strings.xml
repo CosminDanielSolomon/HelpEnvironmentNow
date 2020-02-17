@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">HelpEnvironmentNow</string>
+    <string name="app_name">Environmental Gateway</string>
     <string name="config_file">it.polito.helpenvironmentnow.CONFIG_FILE</string>
     <string name="IP_KEY">ip</string>
     <string name="PORT_KEY">port</string>

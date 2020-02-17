@@ -34,7 +34,7 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".ClassicService" />
+        <service android:name=".StaticService" />
 
         <provider
             android:name="androidx.work.impl.WorkManagerInitializer"

@@ -105,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
                 if(sharedPref.getBoolean(getString(R.string.MODE), false))
                     intent = new Intent(getApplicationContext(), MovementService.class);
                 else
-                    intent = new Intent(getApplicationContext(), ClassicService.class);
+                    intent = new Intent(getApplicationContext(), StaticService.class);
                 intent.putExtra("remoteMacAddress", "B8:27:EB:47:CF:BE");
                 ContextCompat.startForegroundService(getApplicationContext(), intent);
                 Log.d(TAG, "startService(...) performed");
