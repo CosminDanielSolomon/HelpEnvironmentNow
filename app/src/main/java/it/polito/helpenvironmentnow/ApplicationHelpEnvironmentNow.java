@@ -24,6 +24,8 @@ import org.altbeacon.beacon.startup.RegionBootstrap;
 import java.util.Collection;
 import java.util.concurrent.Executors;
 
+import it.polito.helpenvironmentnow.Helper.DynamicModeStatus;
+
 // To better understand the callbacks of this class search for "Android beacon library background detection"
 // Useful link: https://altbeacon.github.io/android-beacon-library/background_launching.html
 public class ApplicationHelpEnvironmentNow extends Application implements BootstrapNotifier, RangeNotifier, Configuration.Provider {
@@ -112,7 +114,9 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
                 getString(R.string.config_file), Context.MODE_PRIVATE);
         if(!sharedPref.contains(getString(R.string.MODE))) {
             SharedPreferences.Editor editor = sharedPref.edit();
-            editor.putBoolean(getString(R.string.MODE), false);
+            editor.putInt(getString(R.string.MODE), DynamicModeStatus.OFF);
+            editor.putString(getString(R.string.DEVICE_NM), "");
+            editor.putString(getString(R.string.DEVICE_ADDR), "");
             editor.commit();
         }
     }

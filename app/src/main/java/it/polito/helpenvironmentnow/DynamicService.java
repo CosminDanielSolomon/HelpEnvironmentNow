@@ -31,12 +31,12 @@ import it.polito.helpenvironmentnow.Storage.Position;
 
 // This SERVICE is enabled when the user activates the MOVEMENT MODE and it is used to get
 // continuous location updates. The positions are saved into a local database; in this way
-// the MovementService can get the saved locations when it needs and can use them to match with the
-// measures taken from the Rasperry Pi using the timestamp as matching criteria.
+// we can use them to match with the measures taken from the Rasperry Pi device using the timestamp
+// as matching criteria.
 // The SERVICE runs indefinitely until the user stops it by disabling the MOVEMENT MODE.
-public class LocationService extends Service {
+public class DynamicService extends Service {
 
-    private final int SERVICE_ID = 3;
+    private final int SERVICE_ID = 2;
     private String TAG = "LocService"; // String used for debug in Log.d method
 
     private Looper serviceLooper;

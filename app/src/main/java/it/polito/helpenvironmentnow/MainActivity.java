@@ -1,7 +1,6 @@
 package it.polito.helpenvironmentnow;
 
 import android.Manifest;
-import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
@@ -46,11 +45,10 @@ import com.google.android.gms.tasks.Task;
 import com.google.android.material.snackbar.Snackbar;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 import it.polito.helpenvironmentnow.Helper.BtDevice;
+import it.polito.helpenvironmentnow.Helper.DynamicModeStatus;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -59,60 +57,69 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_CHECK_SETTINGS = 2;
     private static final int REQUEST_ENABLE_BT = 3;
 
-    private RelativeLayout movementRelativeLayout;
+    private RelativeLayout dynamicLayout;
     private ProgressBar pbTop;
-    private Switch switchMovementMode;
-    private TextView tvMovementModeContent;
-    private Button btnConfig;
+    private Switch switchDynamicMode;
+    private TextView tvDynamicModeContent;
 
+    private CompoundButton.OnCheckedChangeListener switchListener;
     private boolean scanning = false;
     private List<BtDevice> scanningResult = new ArrayList<>();
     private BluetoothAdapter bluetoothAdapter;
     private SharedPreferences sharedPref;
-    private LocationRequest locationRequest; // This field is used for the MOVEMENT mode
+    private LocationRequest locationRequest; // This field is used for the DYNAMIC mode
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        if(savedInstanceState!= null)
+        Log.d(TAG, "omcreate: " + savedInstanceState.getString("keyyy"));
 
-        movementRelativeLayout = findViewById(R.id.movementRelativeLayout);
+        dynamicLayout = findViewById(R.id.movementRelativeLayout);
         pbTop = findViewById(R.id.progressBarMovement);
-        tvMovementModeContent = findViewById(R.id.tvMovementModeContent);
+        tvDynamicModeContent = findViewById(R.id.tvMovementModeContent);
         sharedPref = getSharedPreferences(getString(R.string.config_file), Context.MODE_PRIVATE);
-        boolean movementMode = sharedPref.getBoolean(getString(R.string.MODE), false);
-        switchMovementMode = findViewById(R.id.switchMovementMode);
-        initMovementLayout(movementMode);
-        switchMovementMode.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        int dynamicModeStatus = sharedPref.getInt(getString(R.string.MODE), DynamicModeStatus.OFF);
+        switchDynamicMode = findViewById(R.id.switchMovementMode);
+        String dev_name = sharedPref.getString(getString(R.string.DEVICE_NM), "");
+        String dev_addr = sharedPref.getString(getString(R.string.DEVICE_ADDR), "");
+        BtDevice btDevice = new BtDevice(dev_name, dev_addr);
+        initDynamicModeLayout(dynamicModeStatus, btDevice);
+        switchListener = new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-            if(isChecked) {
+                if(isChecked) {
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    if (getApplicationContext().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                            != PackageManager.PERMISSION_GRANTED) {
-                        switchMovementMode.setChecked(false);
-                        showPermissionSnackbar();
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        if (getApplicationContext().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                                != PackageManager.PERMISSION_GRANTED) {
+                            changeButtonState(false);
+                            showPermissionSnackbar();
+                        } else {
+                            // Check if the device has enabled the needed geolocation settings and start
+                            // DynamicService if the user has the necessary settings
+                            checkDeviceSettings();
+                        }
                     } else {
                         // Check if the device has enabled the needed geolocation settings and start
-                        // LocationService if the user has the necessary settings
+                        // DynamicService if the user has the necessary settings
                         checkDeviceSettings();
                     }
+
+
                 } else {
-                    // Check if the device has enabled the needed geolocation settings and start
-                    // LocationService if the user has the necessary settings
-                    checkDeviceSettings();
+                    if (scanning)
+                        stopScanning();
+                    else
+                        stopDynamicService();
                 }
-
-
-            } else {
-                stopMovementService();
             }
-            }
-        });
+        };
+        switchDynamicMode.setOnCheckedChangeListener(switchListener);
 
         /* TODO remove this part(START) and the corresponding button from activity_main.xml */
-        btnConfig = findViewById(R.id.buttonConfig);
+        Button btnConfig = findViewById(R.id.buttonConfig);
         btnConfig.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -127,14 +134,9 @@ public class MainActivity extends AppCompatActivity {
         btnConnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent;
-                if(sharedPref.getBoolean(getString(R.string.MODE), false))
-                    intent = new Intent(getApplicationContext(), MovementService.class);
-                else
-                    intent = new Intent(getApplicationContext(), StaticService.class);
+                Intent intent = new Intent(getApplicationContext(), StaticService.class);
                 intent.putExtra("remoteMacAddress", "B8:27:EB:47:CF:BE");
                 ContextCompat.startForegroundService(getApplicationContext(), intent);
-                Log.d(TAG, "startService(...) performed");
             }
         });
         /* TODO remove this part(END) */
@@ -143,10 +145,17 @@ public class MainActivity extends AppCompatActivity {
         requestFineLocationPermission();
     }
 
+    private void changeButtonState(boolean state) {
+        switchDynamicMode.setOnCheckedChangeListener(null);
+        switchDynamicMode.setChecked(state);
+        switchDynamicMode.setOnCheckedChangeListener(switchListener);
+    }
+
     @Override
     protected void onPause() {
         super.onPause();
-        stopScanning();
+        if(scanning)
+            stopScanning();
     }
 
     private void requestFineLocationPermission() {
@@ -202,7 +211,7 @@ public class MainActivity extends AppCompatActivity {
         // geolocation settings are not enabled and onFailure is called
         if (requestCode == REQUEST_CHECK_SETTINGS) {
             if (resultCode == RESULT_CANCELED) {
-                switchMovementMode.setChecked(false);
+                changeButtonState(false);
                 showSettingsSnackbar();
             } else if (resultCode == RESULT_OK) {
                 checkBluetoothEnabled();
@@ -212,7 +221,7 @@ public class MainActivity extends AppCompatActivity {
             if (resultCode == RESULT_OK) {
                 startScanning();
             } else if(resultCode == RESULT_CANCELED) {
-                switchMovementMode.setChecked(false);
+                changeButtonState(false);
                 showBluetoothSnackbar();
             }
         }
@@ -231,8 +240,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startScanning() {
-        tvMovementModeContent.setText(R.string.search_dev);
-        pbTop.setVisibility(View.VISIBLE);
+        setLayoutScanning();
         scanning = true;
         // Register for broadcasts when a device is discovered.
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
@@ -241,25 +249,27 @@ public class MainActivity extends AppCompatActivity {
         // start scanning Bluetooth devices
         boolean started = bluetoothAdapter.startDiscovery();
         if(!started) { // Bluetooth is not enabled
-            switchMovementMode.setChecked(false);
+            changeButtonState(false);
             showBluetoothSnackbar();
         }
     }
 
     private void stopScanning() {
-        if(scanning) {
+        try {
             unregisterReceiver(receiver);
-            if(bluetoothAdapter != null && bluetoothAdapter.isDiscovering()) {
-                bluetoothAdapter.cancelDiscovery();
-            }
-            tvMovementModeContent.setText(R.string.movement_mode_body);
-            pbTop.setVisibility(View.GONE);
-            scanning = false;
+            receiver =  null;
+        } catch (IllegalArgumentException e) {
+            // do nothing - it has already been unregistered
         }
+        if(bluetoothAdapter != null && bluetoothAdapter.isDiscovering()) {
+            bluetoothAdapter.cancelDiscovery();
+        }
+        setLayoutOff();
+        scanning = false;
     }
 
     // Create a BroadcastReceiver for ACTION_FOUND.
-    private final BroadcastReceiver receiver = new BroadcastReceiver() {
+    private BroadcastReceiver receiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
@@ -287,6 +297,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void createDialog(final List<BtDevice> devices) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        AlertDialog dialog;
 
         if(devices.size() > 0) {
             final CharSequence[] items = new CharSequence[devices.size()];
@@ -299,66 +310,103 @@ public class MainActivity extends AppCompatActivity {
                 .setItems(items, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         // The 'which' argument contains the index position of the selected item
-                        Log.d(TAG, "index: " + which + " Address: " + devices.get(which).getAddress());
+                        startDynamicService(devices.get(which));
                     }
                 })
                 .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         stopScanning();
-                        switchMovementMode.setChecked(false);
+
                     }
                 });
+            dialog = builder.setCancelable(false).create();
+            ListView listView = dialog.getListView();
+            listView.setDivider(new ColorDrawable(Color.GRAY));
+            listView.setDividerHeight(1);
         } else {
             builder.setTitle("No device found!").setPositiveButton("Ok", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     stopScanning();
-                    switchMovementMode.setChecked(false);
                 }
             });
+            dialog = builder.setCancelable(false).create();
         }
-        AlertDialog dialog = builder.setCancelable(false).create();
-        ListView listView = dialog.getListView();
-        listView.setDivider(new ColorDrawable(Color.GRAY));
-        listView.setDividerHeight(1);
         dialog.show();
     }
 
-    private void startMovementService() {
-        Intent intent = new Intent(getApplicationContext(), LocationService.class);
+    private void startDynamicService(BtDevice btDevice) {
+        Intent intent = new Intent(getApplicationContext(), DynamicService.class);
         intent.putExtra("request", locationRequest);
+        intent.putExtra("address", btDevice.getAddress());
         ContextCompat.startForegroundService(getApplicationContext(), intent);
-        saveMovementStatus(true);
-        setMovementRelativeLayoutBackground(true);
+        saveDynamicModeStatus(DynamicModeStatus.CONNECTING, btDevice);
+        setLayoutConnecting(btDevice);
+        // TODO register broadcast receiver
     }
 
-    private void stopMovementService() {
-        Intent intent = new Intent(getApplicationContext(), LocationService.class);
+    private void stopDynamicService() {
+        Intent intent = new Intent(getApplicationContext(), DynamicService.class);
         stopService(intent);
-        // TODO stop bluetooth discovery if running
-        saveMovementStatus(false);
-        setMovementRelativeLayoutBackground(false);
-
-        stopScanning();
+        saveDynamicModeStatus(DynamicModeStatus.OFF, null);
+        setLayoutOff();
     }
 
-    private void saveMovementStatus(boolean movementMode) {
+    private void saveDynamicModeStatus(int dynamicModeStatus, BtDevice btDevice) {
         SharedPreferences.Editor editor = sharedPref.edit();
-        editor.putBoolean(getString(R.string.MODE), movementMode);
+        editor.putInt(getString(R.string.MODE), dynamicModeStatus);
+        if(btDevice != null) {
+            editor.putString(getString(R.string.DEVICE_NM), btDevice.getName());
+            editor.putString(getString(R.string.DEVICE_ADDR), btDevice.getAddress());
+        }
         editor.commit();
     }
 
-    private void initMovementLayout(boolean movementMode) {
-        setMovementRelativeLayoutBackground(movementMode);
-        switchMovementMode.setChecked(movementMode);
+    // Initialize the background colour and the switch button of the Dynamic mode layout - called only in onCreate(...)
+    private void initDynamicModeLayout(int dynamicModeStatus, BtDevice btDevice) {
+        switch (dynamicModeStatus) {
+            case DynamicModeStatus.OFF:
+                dynamicLayout.setBackgroundColor(Color.parseColor("#9E9E9E"));
+                switchDynamicMode.setChecked(false);
+                tvDynamicModeContent.setText(R.string.movement_mode_body);
+                break;
+            case DynamicModeStatus.CONNECTING:
+                dynamicLayout.setBackgroundColor(Color.parseColor("#9E9E9E"));
+                switchDynamicMode.setChecked(true);
+                String s2 = R.string.connect_dev + btDevice.getName() + " (" + btDevice.getAddress() + ")";
+                tvDynamicModeContent.setText(s2);
+                pbTop.setVisibility(View.VISIBLE);
+                break;
+            case DynamicModeStatus.CONNECTED:
+                dynamicLayout.setBackgroundColor(Color.parseColor("#068DE5"));
+                switchDynamicMode.setChecked(true);
+                String s3 = R.string.connected_dev + btDevice.getName() + " (" + btDevice.getAddress() + ")";
+                tvDynamicModeContent.setText(s3);
+                break;
+        }
     }
 
-    // Sets the background colour of the Movement mode layout
-    private void setMovementRelativeLayoutBackground(boolean state) {
-        if(state)
-            movementRelativeLayout.setBackgroundColor(Color.parseColor("#068DE5"));
-        else
-            movementRelativeLayout.setBackgroundColor(Color.parseColor("#9E9E9E"));
+    private void setLayoutOff() {
+        pbTop.setVisibility(View.GONE);
+        dynamicLayout.setBackgroundColor(Color.parseColor("#9E9E9E"));
+        tvDynamicModeContent.setText(R.string.movement_mode_body);
+    }
+
+    private void setLayoutScanning() {
+        tvDynamicModeContent.setText(R.string.search_dev);
+        pbTop.setVisibility(View.VISIBLE);
+    }
+
+    private void setLayoutConnecting(BtDevice btDevice) {
+        String s = R.string.connect_dev + btDevice.getName() + " (" + btDevice.getAddress() + ")";
+        tvDynamicModeContent.setText(s);
+    }
+
+    private void setLayoutConnected(BtDevice btDevice) {
+        pbTop.setVisibility(View.GONE);
+        dynamicLayout.setBackgroundColor(Color.parseColor("#068DE5"));
+        String s = R.string.connected_dev + btDevice.getName() + " (" + btDevice.getAddress() + ")";
+        tvDynamicModeContent.setText(s);
     }
 
     // Show a snackbar that inform the user that the location permission has not been granted

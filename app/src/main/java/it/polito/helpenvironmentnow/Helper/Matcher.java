@@ -45,7 +45,7 @@ public class Matcher {
             }
         } else {
             // MOVEMENT MODE. I have to match the measures with the recorded positions(that have been
-            // previously inserted in the database by the LocationService)
+            // previously inserted in the database by the DynamicService)
 
             List<Integer> timestamps = new ArrayList<>(parsedMeasures.size());
             for(Measure measure : parsedMeasures) {
