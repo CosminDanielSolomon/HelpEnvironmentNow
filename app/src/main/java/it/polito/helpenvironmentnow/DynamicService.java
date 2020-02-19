@@ -3,7 +3,9 @@ package it.polito.helpenvironmentnow;
 import android.Manifest;
 import android.app.Notification;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
@@ -13,7 +15,10 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
+import android.os.SystemClock;
 import android.util.Log;
+
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -25,6 +30,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import it.polito.helpenvironmentnow.Helper.BtConnection;
+import it.polito.helpenvironmentnow.Helper.BtDevice;
+import it.polito.helpenvironmentnow.Helper.DynamicModeStatus;
+import it.polito.helpenvironmentnow.Helper.RfcommChannel;
 import it.polito.helpenvironmentnow.Helper.ServiceNotification;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 import it.polito.helpenvironmentnow.Storage.Position;
@@ -65,13 +74,35 @@ public class DynamicService extends Service {
                 }
             }
 
-            // Get the location request from the MainActivity
-            LocationRequest locationRequest = (LocationRequest) msg.getData().get("request");
+            // Get info from the activity that started this service
+            String name = msg.getData().getString(getString(R.string.DEVICE_NM));
+            String address = msg.getData().getString(getString(R.string.DEVICE_ADDR));
+            BtDevice btDevice = new BtDevice(name, address);
+            LocationRequest locationRequest = (LocationRequest) msg.getData().get(getString(R.string.LOCATION_REQ));
 
-            // Request location updates
+            // Save into Shared Preferences the status(CONNECTING) of the DynamicService
+            saveDynamicModeStatus(DynamicModeStatus.CONNECTING, btDevice);
+
+            // Request location updates and open db
             locationClient = LocationServices.getFusedLocationProviderClient(getApplicationContext());
             locationClient.requestLocationUpdates(locationRequest, locationCallback, serviceLooper);
             myDb = new MyDb(getApplicationContext());
+
+            /*for(int i = 0; i < 12; i++ )
+                SystemClock.sleep(1000);
+            Log.d(TAG, "sleep finished");*/
+            // Connect to Raspberry Pi
+            DynamicRaspberryPi pi = new DynamicRaspberryPi();
+            if(pi.connect(address)) {
+                saveDynamicModeStatus(DynamicModeStatus.CONNECTED, btDevice);
+                broadcastDynamicModeStatus(DynamicModeStatus.CONNECTED, btDevice);
+                // TODO read, match and manage internal exception
+            } else {
+                broadcastDynamicModeStatus(DynamicModeStatus.OFF, null);
+                // TODO create notification for conn interrupted
+                stopSelf();
+            }
+
         }
     }
 
@@ -140,13 +171,38 @@ public class DynamicService extends Service {
 
     @Override
     public void onDestroy() {
-        locationClient.removeLocationUpdates(locationCallback);
-        if(myDb != null)
+        saveDynamicModeStatus(DynamicModeStatus.OFF, null);
+        Log.d(TAG, "onDestroy()");
+        if (locationClient != null)
+            locationClient.removeLocationUpdates(locationCallback);
+        if (myDb != null)
             myDb.closeDb();
     }
 
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    private void saveDynamicModeStatus(int dynamicModeStatus, BtDevice btDevice) {
+        SharedPreferences sharedPref = getSharedPreferences(getString(R.string.config_file), Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putInt(getString(R.string.MODE), dynamicModeStatus);
+        if (btDevice != null) {
+            editor.putString(getString(R.string.DEVICE_NM), btDevice.getName());
+            editor.putString(getString(R.string.DEVICE_ADDR), btDevice.getAddress());
+        }
+        editor.commit();
+    }
+
+    private void broadcastDynamicModeStatus(int dynamicModeStatus, BtDevice btDevice) {
+        Intent localIntent = new Intent(DynamicModeStatus.BROADCAST_ACTION)
+                .putExtra(getString(R.string.MODE), dynamicModeStatus);
+        if (btDevice != null) {
+            localIntent.putExtra(getString(R.string.DEVICE_NM), btDevice.getName())
+                    .putExtra(getString(R.string.DEVICE_ADDR), btDevice.getAddress());
+        }
+        // Broadcasts the Intent to receivers in this app( to the MainActivity )
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(localIntent);
     }
 }

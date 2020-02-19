@@ -42,7 +42,6 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
     public void onCreate() {
         super.onCreate();
         Log.d(TAG, "App started up");
-        initializeMode();
         beaconManager = BeaconManager.getInstanceForApplication(this);
         beaconManager.setRegionStatePersistenceEnabled(false);
         // To detect proprietary beacons, you must add a line like below corresponding to your beacon
@@ -109,7 +108,7 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
         return new Configuration.Builder().setExecutor(Executors.newSingleThreadExecutor()).build();
     }
 
-    private void initializeMode() {
+    /*private void initializeMode() {
         SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(
                 getString(R.string.config_file), Context.MODE_PRIVATE);
         if(!sharedPref.contains(getString(R.string.MODE))) {
@@ -119,5 +118,5 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
             editor.putString(getString(R.string.DEVICE_ADDR), "");
             editor.commit();
         }
-    }
+    }*/
 }

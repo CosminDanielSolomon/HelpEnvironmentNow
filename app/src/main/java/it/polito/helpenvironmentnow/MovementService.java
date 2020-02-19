@@ -40,7 +40,7 @@ public class MovementService extends IntentService {
 
         /* the remote device is the the Raspberry Pi */
         String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
-        RaspberryPi rPi = new RaspberryPi();
+        StaticRaspberryPi rPi = new StaticRaspberryPi();
         long insertions = rPi.connectAndRead(remoteDeviceMacAddress, myDb);
         // Close the db connection as it is not used anymore
         myDb.closeDb();

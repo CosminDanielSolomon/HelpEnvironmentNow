@@ -3,13 +3,9 @@ package it.polito.helpenvironmentnow;
 import android.app.IntentService;
 import android.app.Notification;
 import android.content.Intent;
-import android.location.Location;
 import android.os.Build;
-import android.os.SystemClock;
 import android.util.Log;
 
-import it.polito.helpenvironmentnow.Helper.LocationInfo;
-import it.polito.helpenvironmentnow.Helper.MyLocationListener;
 import it.polito.helpenvironmentnow.Helper.ServiceNotification;
 import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
 import it.polito.helpenvironmentnow.Storage.MyDb;
@@ -51,12 +47,12 @@ public class StaticService extends IntentService /*implements MyLocationListener
 //            SystemClock.sleep(WAIT_LOCATION_MS);
 //        }
 
-        // Open the db connection. It will be used inside RaspberryPi object
+        // Open the db connection. It will be used inside StaticRaspberryPi object
         MyDb myDb = new MyDb(getApplicationContext());
 
         /* the remote device is the the Raspberry Pi device */
         String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
-        RaspberryPi rPi = new RaspberryPi();
+        StaticRaspberryPi rPi = new StaticRaspberryPi();
         long insertions = rPi.connectAndRead(remoteDeviceMacAddress, myDb);
         // Close the db connection as it is not used anymore
         myDb.closeDb();

@@ -1,9 +1,6 @@
 package it.polito.helpenvironmentnow;
 
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
-import android.os.SystemClock;
 import android.util.JsonReader;
 import android.util.Log;
 
@@ -11,101 +8,42 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import it.polito.helpenvironmentnow.Helper.BtConnection;
+import it.polito.helpenvironmentnow.Helper.RfcommChannel;
 import it.polito.helpenvironmentnow.Storage.Measure;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 
-// The main purpose of this class is to connect to the Raspberry Pi device, read the stream of bytes,
-// parse it to obtain each measure and associate it(matching) with a location. While receiving the
-// data, the measures are inserted into a local database.
-// At the end the Raspberry Pi is acknowledged and the socket connection is close.
-public class RaspberryPi {
+// The main purpose of this class is to connect to the Raspberry Pi device and manage the connection.
+// The measures are inserted into a local database.
+public class StaticRaspberryPi {
 
-    private String TAG = "RaspberryPi";
-    private static final int STATIC_CHANNEL = 1;
-    private static final int MAX_CONNECTION_ATTEMPTS = 15; // the max number to retry establish bluetooth connection if fails
-    private static final int BLUETOOTH_MSECONDS_SLEEP = 3000; // milliseconds to sleep if open connection fails
+    private String TAG = "StaticRaspberryPi";
+    private final int STATIC_CHANNEL = 1;
     private final byte[] ACK_CHUNK = "ok".getBytes();
-
-    private BluetoothAdapter bluetoothAdapter;
-
     private long totalInsertions = 0;
 
     // This method calls "connectAndReadFromRaspberry" and returns the number of measures received
     // and inserted into local database
     public long connectAndRead(String remoteDeviceMacAddress, MyDb myDb) {
 
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if(bluetoothAdapter != null)
-            connectAndReadFromRaspberry(remoteDeviceMacAddress, myDb);
+        BtConnection btConn = new BtConnection();
+        RfcommChannel rfcommChannel = btConn.establishConnection(remoteDeviceMacAddress, STATIC_CHANNEL);
+        if(rfcommChannel != null) {
+            try {
+                readSaveChunks(rfcommChannel.getChannelInputStream(), rfcommChannel.getChannelOutputStream(), myDb);
+            } catch (IOException e) {
+                Log.e(TAG, "socket IOException during readSaveChunks");
+                e.printStackTrace();
+            } finally {
+                btConn.closeConnection();
+            }
+        }
 
         return totalInsertions;
-    }
-
-    // This method receives the stream of bytes from the Raspberry Pi device, parses and saves the
-    // measures into local database, after obtaining(matching) the location for the measures.
-    // At the end it acknowledges the Raspberry Pi if no exceptions occur.
-    private void connectAndReadFromRaspberry(String remoteDeviceMacAddress, MyDb myDb) {
-
-        BluetoothSocket socket = getBluetoothSocketByReflection(remoteDeviceMacAddress);
-        if(socket != null) {
-            int attempt = 1;
-            if (bluetoothAdapter.isDiscovering())
-                bluetoothAdapter.cancelDiscovery();
-            while (attempt <= MAX_CONNECTION_ATTEMPTS && !socket.isConnected()) {
-                try {
-                    Log.d(TAG, "Socket connect() attempt:" + attempt);
-                    socket.connect();
-                } catch (IOException e) {
-                    Log.d(TAG, "Socket connect() failed!");
-                    e.printStackTrace();
-                    if (attempt < MAX_CONNECTION_ATTEMPTS)
-                        SystemClock.sleep(BLUETOOTH_MSECONDS_SLEEP); // sleep before retry to connect
-                }
-                attempt++;
-            }
-            if(socket.isConnected()) {
-                try {
-                    InputStream socketInputStream = socket.getInputStream();
-                    OutputStream socketOutputStream = socket.getOutputStream();
-                    readSaveChunks(socketInputStream, socketOutputStream, myDb);
-                } catch (IOException e) {
-                    Log.e(TAG, "socket IOException during readSaveChunks");
-                    e.printStackTrace();
-                } finally {
-                    try {
-                        Log.d(TAG, "I close connected socket.");
-                        socket.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-    }
-
-    private BluetoothSocket getBluetoothSocketByReflection(String remoteDeviceMacAddress) {
-        BluetoothDevice remoteDevice;
-        BluetoothSocket socket = null;
-        if(BluetoothAdapter.checkBluetoothAddress(remoteDeviceMacAddress)) {
-            remoteDevice = bluetoothAdapter.getRemoteDevice(remoteDeviceMacAddress);
-            try {
-                socket = (BluetoothSocket) BluetoothDevice.class.getMethod(
-                        "createInsecureRfcommSocket", int.class).invoke(remoteDevice, STATIC_CHANNEL);
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
-            } catch (NoSuchMethodException e) {
-                e.printStackTrace();
-            }
-        }
-
-        return socket;
     }
 
     private void readSaveChunks(InputStream socketInputStream, OutputStream socketOutputStream,
