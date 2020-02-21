@@ -26,13 +26,8 @@ public class StaticService extends IntentService /*implements MyLocationListener
         super.onCreate();
         // A foreground service in order to work in Android has to show a notification, as quoted by
         // the official guide: "Foreground services must display a Notification."
-        Notification notification;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) // check if Android version is 8 or higher
-            notification = ServiceNotification.getMyOwnNotification(this, "static", "Temporary Service",
-                    "Background Temporary Service(static mode)", "Environmental data exchange"); // foreground service notification for Android 8+
-        else
-            notification =  new Notification(); // foreground service notification for Android 7.x or below
-        startForeground(SERVICE_ID, notification);
+        ServiceNotification.notifyForeground(this, SERVICE_ID, "Background Temporary Service",
+                "Receiving environmental data from Pi device");
     }
 
     @Override

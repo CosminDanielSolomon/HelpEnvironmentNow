@@ -19,11 +19,14 @@ public class LocationInfo {
     private static final double defaultLatitude = 0.0;
     private static final double defaultLongitude = 0.0;
 
-    public static void getCurrentLocation(Context context, final MyLocationListener myLocationListener) {
+    public static boolean getCurrentLocation(Context context, final MyLocationListener myLocationListener) {
         FusedLocationProviderClient locationClient = LocationServices.getFusedLocationProviderClient(context);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                return;
+            if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) !=
+                    PackageManager.PERMISSION_GRANTED &&
+                    context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                return false;
             }
         }
         locationClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
@@ -44,6 +47,8 @@ public class LocationInfo {
                 }
             }
         });
+
+        return true;
     }
 
     public static String encodeLocation(Location location) {

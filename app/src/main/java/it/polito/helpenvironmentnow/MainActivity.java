@@ -83,9 +83,13 @@ public class MainActivity extends AppCompatActivity {
                 if(!scanningResult.contains(btDevice)) {
                     scanningResult.add(btDevice);
                     Log.d(TAG, "FIRST: " + btDevice.getName() + " " + btDevice.getAddress());
-                }
-                else
+                } else {
                     Log.d(TAG, "DUPLICATE: " + btDevice.getName() + " " + btDevice.getAddress());
+                    // usually the second time a device is received, it contains its name instead
+                    // of "null" so I replace "null" with the bluetooth name
+                    int index = scanningResult.indexOf(btDevice);
+                    scanningResult.get(index).setName(btDevice.getName());
+                }
             }
             if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
                 stopScanning();

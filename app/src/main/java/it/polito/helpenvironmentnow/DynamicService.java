@@ -1,7 +1,6 @@
 package it.polito.helpenvironmentnow;
 
 import android.Manifest;
-import android.app.Notification;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -15,7 +14,6 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
-import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -35,18 +33,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import it.polito.helpenvironmentnow.Helper.BtDevice;
 import it.polito.helpenvironmentnow.Helper.DynamicModeStatus;
 import it.polito.helpenvironmentnow.Helper.ServiceNotification;
+import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 import it.polito.helpenvironmentnow.Storage.Position;
 
-// This SERVICE is enabled when the user activates the MOVEMENT MODE and it is used to get
+// This SERVICE is enabled when the user activates the DYNAMIC MODE and it is used to get
 // continuous location updates. The positions are saved into a local database; in this way
-// we can use them to match with the measures taken from the Rasperry Pi device using the timestamp
-// as matching criteria.
-// The SERVICE runs indefinitely until the user stops it by disabling the MOVEMENT MODE.
+// we can use the positions later and match with the measures received from the Raspberry Pi device
+// using the timestamp as matching criteria.
+// The SERVICE runs indefinitely until the user stops it by disabling the DYNAMIC MODE or until the
+// connection is lost.
 public class DynamicService extends Service {
 
     private final int SERVICE_ID = 2;
-    private String TAG = "LocService"; // String used for debug in Log.d method
+    private String TAG = "DynamicService"; // String used for debug in Log.d() method
 
     private Looper serviceLooper;
     private ServiceHandler serviceHandler;
@@ -94,6 +94,17 @@ public class DynamicService extends Service {
             }
             Log.d(TAG, "sleep finished");*/
 
+            /*while (true) {
+                try {
+                    if(test) {
+                        throw new IOException("");
+                    }
+                } catch (IOException e) {
+                    SystemClock.sleep(3000);
+                    endService();
+                    break;
+                }
+            }*/
             // Connect to Raspberry Pi
             pi = new DynamicRaspberryPi(getApplicationContext());
             if(pi.connect(address)) {
@@ -101,10 +112,12 @@ public class DynamicService extends Service {
                 broadcastDynamicModeStatus(DynamicModeStatus.CONNECTED, btDevice);
                 try {
                     pi.read(); // it is a BLOCKING call. It is stopped on user request(stop Dynamic mode) or IOException
-                    // TODO send location
-                    // TODO release socket
+                    pi.sendLocation();
+                    boolean ackReceived = pi.waitLocationAck();
+                    pi.closeConnection();
+                    if (!ackReceived)
+                        endService();
                 } catch (IOException e) {
-                    e.printStackTrace(); // TODO remove
                     endService();
                 }
             } else {
@@ -118,13 +131,8 @@ public class DynamicService extends Service {
     public void onCreate() {
         // A foreground service in order to work in Android has to show a notification, as quoted by
         // the official guide: "Foreground services must display a Notification."
-        Notification notification;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) // check if Android version is 8 or higher
-            notification = ServiceNotification.getMyOwnNotification(this, "loc","HelpEnvironmentNow Service",
-                    "MOVEMENT mode is ON", "Continuous location tracking is enabled"); // foreground service notification for Android 8+
-        else
-            notification =  new Notification(); // foreground service notification for Android 7.x or below
-        startForeground(SERVICE_ID, notification);
+        ServiceNotification.notifyForeground(this, SERVICE_ID, "Dynamic Service is ON",
+                "Keep Android and Pi close together");
 
         locationClient = LocationServices.getFusedLocationProviderClient(getApplicationContext());
         locationCallback = new LocationCallback() {
@@ -181,6 +189,7 @@ public class DynamicService extends Service {
 
     @Override
     public void onDestroy() {
+        Log.d(TAG, "onDestroy(), init");
         if (userStop.get() && pi != null) {
             pi.stopReading();
         }
@@ -191,6 +200,8 @@ public class DynamicService extends Service {
             myDb.closeDb();
         serviceLooper.quitSafely();
         serviceLooper.getThread().interrupt();
+        /* I enqueue a work that the Worker Manager will execute when network became available */
+        MyWorkerManager.enqueueNetworkWorker(getApplicationContext());
         Log.d(TAG, "onDestroy(), exit");
     }
 
@@ -224,7 +235,7 @@ public class DynamicService extends Service {
     private void endService() {
         broadcastDynamicModeStatus(DynamicModeStatus.OFF, null);
         userStop.set(false);
-        // TODO create notification for conn interrupted
+        ServiceNotification.showDisconnect(DynamicService.this);
         stopSelf();
     }
 }

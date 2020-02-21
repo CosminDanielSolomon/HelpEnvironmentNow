@@ -65,7 +65,7 @@ public class BtConnection {
                 Log.d(TAG, "I close connected socket.");
                 socket.close();
             } catch (IOException e) {
-                //
+                Log.e(TAG, "Close bluetooth socket failed!");
             }
         }
     }
