@@ -26,14 +26,14 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import it.polito.helpenvironmentnow.Helper.BtConnection;
 import it.polito.helpenvironmentnow.Helper.BtDevice;
 import it.polito.helpenvironmentnow.Helper.DynamicModeStatus;
-import it.polito.helpenvironmentnow.Helper.RfcommChannel;
 import it.polito.helpenvironmentnow.Helper.ServiceNotification;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 import it.polito.helpenvironmentnow.Storage.Position;
@@ -55,6 +55,8 @@ public class DynamicService extends Service {
     private LocationCallback locationCallback;
 
     private MyDb myDb;
+    private AtomicBoolean userStop = new AtomicBoolean(true);
+    private DynamicRaspberryPi pi;
 
     // Handler that receives messages from the thread
     private final class ServiceHandler extends Handler {
@@ -84,23 +86,29 @@ public class DynamicService extends Service {
             saveDynamicModeStatus(DynamicModeStatus.CONNECTING, btDevice);
 
             // Request location updates and open db
-            locationClient = LocationServices.getFusedLocationProviderClient(getApplicationContext());
             locationClient.requestLocationUpdates(locationRequest, locationCallback, serviceLooper);
-            myDb = new MyDb(getApplicationContext());
 
-            /*for(int i = 0; i < 12; i++ )
+            /*for(int i = 0; i < 20; i++ ) {
+                Log.d(TAG, "sleep:" + (i+1));
                 SystemClock.sleep(1000);
+            }
             Log.d(TAG, "sleep finished");*/
+
             // Connect to Raspberry Pi
-            DynamicRaspberryPi pi = new DynamicRaspberryPi();
+            pi = new DynamicRaspberryPi(getApplicationContext());
             if(pi.connect(address)) {
                 saveDynamicModeStatus(DynamicModeStatus.CONNECTED, btDevice);
                 broadcastDynamicModeStatus(DynamicModeStatus.CONNECTED, btDevice);
-                // TODO read, match and manage internal exception
+                try {
+                    pi.read(); // it is a BLOCKING call. It is stopped on user request(stop Dynamic mode) or IOException
+                    // TODO send location
+                    // TODO release socket
+                } catch (IOException e) {
+                    e.printStackTrace(); // TODO remove
+                    endService();
+                }
             } else {
-                broadcastDynamicModeStatus(DynamicModeStatus.OFF, null);
-                // TODO create notification for conn interrupted
-                stopSelf();
+                endService();
             }
 
         }
@@ -118,6 +126,7 @@ public class DynamicService extends Service {
             notification =  new Notification(); // foreground service notification for Android 7.x or below
         startForeground(SERVICE_ID, notification);
 
+        locationClient = LocationServices.getFusedLocationProviderClient(getApplicationContext());
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
@@ -140,6 +149,7 @@ public class DynamicService extends Service {
             }
         };
 
+        myDb = new MyDb(getApplicationContext());
         // Start up the thread running the service. Note that we create a
         // separate thread because the service normally runs in the process's
         // main thread, which we don't want to block.
@@ -171,12 +181,17 @@ public class DynamicService extends Service {
 
     @Override
     public void onDestroy() {
+        if (userStop.get() && pi != null) {
+            pi.stopReading();
+        }
         saveDynamicModeStatus(DynamicModeStatus.OFF, null);
-        Log.d(TAG, "onDestroy()");
         if (locationClient != null)
             locationClient.removeLocationUpdates(locationCallback);
         if (myDb != null)
             myDb.closeDb();
+        serviceLooper.quitSafely();
+        serviceLooper.getThread().interrupt();
+        Log.d(TAG, "onDestroy(), exit");
     }
 
     @Override
@@ -204,5 +219,12 @@ public class DynamicService extends Service {
         }
         // Broadcasts the Intent to receivers in this app( to the MainActivity )
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(localIntent);
+    }
+
+    private void endService() {
+        broadcastDynamicModeStatus(DynamicModeStatus.OFF, null);
+        userStop.set(false);
+        // TODO create notification for conn interrupted
+        stopSelf();
     }
 }
