@@ -48,8 +48,6 @@ public class BtConnection {
                     try {
                         rfcommChannel = new RfcommChannel(socket.getInputStream(), socket.getOutputStream());
                     } catch (IOException e) {
-                        //
-                    } finally {
                         closeConnection();
                     }
                 }

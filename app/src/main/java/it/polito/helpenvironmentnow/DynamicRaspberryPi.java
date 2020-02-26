@@ -35,7 +35,6 @@ public class DynamicRaspberryPi implements MyLocationListener {
     private Context context;
     private BtConnection btConn = null;
     private RfcommChannel rfcommChannel = null;
-    private AtomicBoolean stopRequested = new AtomicBoolean(false);
     private AtomicBoolean locationReady = new AtomicBoolean(false);
     private Location lastLocation;
 
@@ -54,6 +53,27 @@ public class DynamicRaspberryPi implements MyLocationListener {
         return result;
     }
 
+    public void requestData() throws IOException {
+        OutputStreamWriter osw = new OutputStreamWriter(rfcommChannel.getChannelOutputStream(),
+                StandardCharsets.UTF_8);
+        JsonWriter jsonWriter = new JsonWriter(osw);
+        try {
+            writeActionGET(jsonWriter);
+            jsonWriter.flush();
+            //closeWriter(jsonWriter);
+        } catch (IOException e) {
+            closeWriter(jsonWriter);
+            btConn.closeConnection();
+            throw e;
+        }
+    }
+
+    private void writeActionGET(JsonWriter jsonWriter) throws IOException {
+        jsonWriter.beginObject();
+        jsonWriter.name("action").value("get");
+        jsonWriter.endObject();
+    }
+
     public void read() throws IOException {
         if(rfcommChannel != null) {
             Matcher matcher = new Matcher();
@@ -62,46 +82,36 @@ public class DynamicRaspberryPi implements MyLocationListener {
                     StandardCharsets.UTF_8);
             JsonReader jsonReader = new JsonReader(isr);
             jsonReader.setLenient(true); // it is needed in order to avoid MalformedJsonException before reading the second chunk and the others that follow
-            while (true) {
-                try {
-                    if (isr.ready()) {
-                        List<Measure> measures = readChunk(jsonReader);
-                        if(measures.size() > 0) {
-                            // match measures with dynamic positions
-                            matcher.matchMeasuresAndPositions(measures, myDb);
-                            // save measures into local database
-                            myDb.insertMeasures(measures);
-                        }
-                        // TODO remove ---
-                        int min = Integer.MAX_VALUE, max = 0;
-                        for(Measure me : measures) {
-                            if(me.timestamp < min)
-                                min = me.timestamp;
-                            if(me.timestamp > max)
-                                max = me.timestamp;
-                        }
-                        Log.d(TAG, "min: " + min +" max: " + max);
-                        // TODO remove ---
+            try {
+                List<Measure> measures = readChunk(jsonReader);
+                if(measures.size() > 0) {
+                    // match measures with dynamic positions
+                    matcher.matchMeasuresAndPositions(measures, myDb);
+                    // save measures into local database
+                    myDb.insertMeasures(measures);
+
+                    // TODO remove ---
+                    int min = Integer.MAX_VALUE, max = 0;
+                    for(Measure me : measures) {
+                        if(me.timestamp < min)
+                            min = me.timestamp;
+                        if(me.timestamp > max)
+                            max = me.timestamp;
                     }
-                } catch (IOException e) {
-                    myDb.closeDb();
-                    closeReader(jsonReader);
-                    btConn.closeConnection();
-                    throw e;
+                    Log.d(TAG, "min: " + min +" max: " + max);
+                    // TODO remove ---
+
                 }
-                if(stopRequested.get()) {
-                   break;
-                } else {
-                    SystemClock.sleep(READ_SLEEP_MILLI_SEC);
-                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                myDb.closeDb();
+                closeReader(jsonReader);
+                btConn.closeConnection();
+                throw e;
             }
             myDb.closeDb();
-            closeReader(jsonReader);
+            //closeReader(jsonReader);
         }
-    }
-
-    public void stopReading() {
-        stopRequested.set(true);
     }
 
     // A chunk is a JSON format containing an array of measures
@@ -145,23 +155,7 @@ public class DynamicRaspberryPi implements MyLocationListener {
         return measures;
     }
 
-    private void closeReader(JsonReader jsonReader) {
-        try {
-            jsonReader.close();
-        } catch (IOException e) {
-            Log.e(TAG, "Close JsonReader failed!");
-        }
-    }
-
-    private void closeWriter(JsonWriter jsonWriter) {
-        try {
-            jsonWriter.close();
-        } catch (IOException e) {
-            Log.e(TAG, "Close JsonWriter failed!");
-        }
-    }
-
-    public void sendLocation() throws IOException {
+    public void sendLocation() {
         boolean started = LocationInfo.getCurrentLocation(context, this);
         if(started) {
             while (!locationReady.get()) {
@@ -174,11 +168,11 @@ public class DynamicRaspberryPi implements MyLocationListener {
             JsonWriter writer = new JsonWriter(osw);
             try {
                 writeLocation(writer, geohash, altitude);
-                closeWriter(writer);
             } catch (IOException e) {
+                Log.e(TAG, "Connection end in wrong way!");
+            } finally {
                 closeWriter(writer);
                 btConn.closeConnection();
-                throw e;
             }
         } else {
             // TODO inform user that permissions are needed
@@ -187,6 +181,7 @@ public class DynamicRaspberryPi implements MyLocationListener {
 
     private void writeLocation(JsonWriter writer, String geohash, double altitude) throws IOException {
         writer.beginObject();
+        writer.name("action").value("set");
         writer.name("geohash").value(geohash);
         writer.name("altitude").value(altitude);
         writer.endObject();
@@ -211,6 +206,7 @@ public class DynamicRaspberryPi implements MyLocationListener {
                         ack = true;
                     else
                         current_wait = MAX_WAIT_MILLI_SEC;
+                    closeReader(jsonReader);
                 } else {
                     SystemClock.sleep(SINGLE_WAIT_MILLI_SEC);
                     current_wait += SINGLE_WAIT_MILLI_SEC;
@@ -230,12 +226,22 @@ public class DynamicRaspberryPi implements MyLocationListener {
         jsonReader.nextName();
         String value = jsonReader.nextString();
         jsonReader.endObject();
-        if (value.equals(expectedAck))
-            return true;
-        return false;
+        return value.equals(expectedAck);
     }
 
-    public void closeConnection() {
-        btConn.closeConnection();
+    private void closeReader(JsonReader jsonReader) {
+        try {
+            jsonReader.close();
+        } catch (IOException e) {
+            Log.e(TAG, "Close JsonReader failed!");
+        }
+    }
+
+    private void closeWriter(JsonWriter jsonWriter) {
+        try {
+            jsonWriter.close();
+        } catch (IOException e) {
+            Log.e(TAG, "Close JsonWriter failed!");
+        }
     }
 }

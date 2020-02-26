@@ -53,10 +53,55 @@ public class DynamicService extends Service {
 
     private FusedLocationProviderClient locationClient;
     private LocationCallback locationCallback;
-
     private MyDb myDb;
-    private AtomicBoolean userStop = new AtomicBoolean(true);
+
+    private BtDevice remoteDevice;
     private DynamicRaspberryPi pi;
+
+    private AtomicBoolean stop = new AtomicBoolean(false);
+
+    private Runnable runnableConnect = new Runnable() {
+        @Override
+        public void run() {
+            // Connect to Raspberry Pi
+            pi = new DynamicRaspberryPi(getApplicationContext());
+            if(pi.connect(remoteDevice.getAddress())) {
+                saveDynamicModeStatus(DynamicModeStatus.CONNECTED, remoteDevice);
+                broadcastDynamicModeStatus(DynamicModeStatus.CONNECTED, remoteDevice);
+                serviceHandler.postDelayed(runnableLoop, 3000);
+                Log.d(TAG, "runnableConnect ends after connect success");
+            } else {
+                endService();
+            }
+        }
+    };
+
+    private Runnable runnableLoop = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                pi.requestData();
+                Log.d(TAG, "requestData SUCCESS");
+                pi.read();
+                Log.d(TAG, "read SUCCESS");
+                serviceHandler.postDelayed(this, 15000);
+                if (stop.get())
+                    serviceHandler.removeCallbacks(this);
+                Log.d(TAG, "runnableLoop ends");
+            } catch (IOException e) {
+                endService();
+            }
+        }
+    };
+
+    private Runnable runnableEnd = new Runnable() {
+        @Override
+        public void run() {
+            if (pi != null) {
+                pi.sendLocation();
+            }
+        }
+    };
 
     // Handler that receives messages from the thread
     private final class ServiceHandler extends Handler {
@@ -66,65 +111,7 @@ public class DynamicService extends Service {
         }
 
         @Override
-        public void handleMessage(Message msg) {
-
-            // Check for permissions. If not granted, stop the service.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (getApplicationContext().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                        != PackageManager.PERMISSION_GRANTED) {
-                    stopSelf();
-                }
-            }
-
-            // Get info from the activity that started this service
-            String name = msg.getData().getString(getString(R.string.DEVICE_NM));
-            String address = msg.getData().getString(getString(R.string.DEVICE_ADDR));
-            BtDevice btDevice = new BtDevice(name, address);
-            LocationRequest locationRequest = (LocationRequest) msg.getData().get(getString(R.string.LOCATION_REQ));
-
-            // Save into Shared Preferences the status(CONNECTING) of the DynamicService
-            saveDynamicModeStatus(DynamicModeStatus.CONNECTING, btDevice);
-
-            // Request location updates and open db
-            locationClient.requestLocationUpdates(locationRequest, locationCallback, serviceLooper);
-
-            /*for(int i = 0; i < 20; i++ ) {
-                Log.d(TAG, "sleep:" + (i+1));
-                SystemClock.sleep(1000);
-            }
-            Log.d(TAG, "sleep finished");*/
-
-            /*while (true) {
-                try {
-                    if(test) {
-                        throw new IOException("");
-                    }
-                } catch (IOException e) {
-                    SystemClock.sleep(3000);
-                    endService();
-                    break;
-                }
-            }*/
-            // Connect to Raspberry Pi
-            pi = new DynamicRaspberryPi(getApplicationContext());
-            if(pi.connect(address)) {
-                saveDynamicModeStatus(DynamicModeStatus.CONNECTED, btDevice);
-                broadcastDynamicModeStatus(DynamicModeStatus.CONNECTED, btDevice);
-                try {
-                    pi.read(); // it is a BLOCKING call. It is stopped on user request(stop Dynamic mode) or IOException
-                    pi.sendLocation();
-                    boolean ackReceived = pi.waitLocationAck();
-                    pi.closeConnection();
-                    if (!ackReceived)
-                        endService();
-                } catch (IOException e) {
-                    endService();
-                }
-            } else {
-                endService();
-            }
-
-        }
+        public void handleMessage(Message msg) {}
     }
 
     @Override
@@ -158,6 +145,7 @@ public class DynamicService extends Service {
         };
 
         myDb = new MyDb(getApplicationContext());
+
         // Start up the thread running the service. Note that we create a
         // separate thread because the service normally runs in the process's
         // main thread, which we don't want to block.
@@ -176,12 +164,33 @@ public class DynamicService extends Service {
     // representing the start request. Do not call this method directly.
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Check for permissions. If not granted, stop the service.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (getApplicationContext().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                endService();
+                // TODO send broadcast permissions needed
+            }
+        }
+        // Get info from the activity that started this service
+        String name = intent.getExtras().getString(getString(R.string.DEVICE_NM));
+        String address = intent.getExtras().getString(getString(R.string.DEVICE_ADDR));
+        remoteDevice = new BtDevice(name, address);
+        LocationRequest locationRequest = (LocationRequest) intent.getExtras()
+                .get(getString(R.string.LOCATION_REQ));
+        // Save into Shared Preferences the status(CONNECTING) of the DynamicService
+        saveDynamicModeStatus(DynamicModeStatus.CONNECTING, remoteDevice);
         // For each start request, send a message to start a job and deliver the
         // start ID so we know which request we're stopping when we finish the job
-        Message msg = serviceHandler.obtainMessage();
-        msg.arg1 = startId;
-        msg.setData(intent.getExtras());
-        serviceHandler.sendMessage(msg);
+//        Message msg = serviceHandler.obtainMessage();
+//        msg.arg1 = startId;
+//        msg.setData(intent.getExtras());
+//        serviceHandler.sendMessage(msg);
+
+        // Request location updates
+        locationClient.requestLocationUpdates(locationRequest, locationCallback, serviceLooper);
+        // Start the connection to remote device
+        serviceHandler.post(runnableConnect);
 
         // If we get killed, after returning from here, restart
         return START_STICKY;
@@ -190,9 +199,9 @@ public class DynamicService extends Service {
     @Override
     public void onDestroy() {
         Log.d(TAG, "onDestroy(), init");
-        if (userStop.get() && pi != null) {
-            pi.stopReading();
-        }
+        stop.set(true);
+        serviceHandler.removeCallbacks(runnableLoop);
+        serviceHandler.post(runnableEnd);
         saveDynamicModeStatus(DynamicModeStatus.OFF, null);
         if (locationClient != null)
             locationClient.removeLocationUpdates(locationCallback);
@@ -234,8 +243,8 @@ public class DynamicService extends Service {
 
     private void endService() {
         broadcastDynamicModeStatus(DynamicModeStatus.OFF, null);
-        userStop.set(false);
         ServiceNotification.showDisconnect(DynamicService.this);
+        pi = null;
         stopSelf();
     }
 }
