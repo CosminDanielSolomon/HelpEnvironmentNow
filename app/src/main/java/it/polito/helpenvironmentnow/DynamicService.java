@@ -69,7 +69,7 @@ public class DynamicService extends Service {
                 saveDynamicModeStatus(DynamicModeStatus.CONNECTED, remoteDevice);
                 broadcastDynamicModeStatus(DynamicModeStatus.CONNECTED, remoteDevice);
                 serviceHandler.postDelayed(runnableLoop, 3000);
-                Log.d(TAG, "runnableConnect ends after connect success");
+                Log.d(TAG, "runnableConnect SUCCESS");
             } else {
                 endService();
             }
@@ -81,13 +81,11 @@ public class DynamicService extends Service {
         public void run() {
             try {
                 pi.requestData();
-                Log.d(TAG, "requestData SUCCESS");
                 pi.read();
                 Log.d(TAG, "read SUCCESS");
                 serviceHandler.postDelayed(this, 15000);
                 if (stop.get())
                     serviceHandler.removeCallbacks(this);
-                Log.d(TAG, "runnableLoop ends");
             } catch (IOException e) {
                 endService();
             }
@@ -99,6 +97,7 @@ public class DynamicService extends Service {
         public void run() {
             if (pi != null) {
                 pi.sendLocation();
+                Log.d(TAG, "runnableEnd SUCCESS");
             }
         }
     };
@@ -180,13 +179,6 @@ public class DynamicService extends Service {
                 .get(getString(R.string.LOCATION_REQ));
         // Save into Shared Preferences the status(CONNECTING) of the DynamicService
         saveDynamicModeStatus(DynamicModeStatus.CONNECTING, remoteDevice);
-        // For each start request, send a message to start a job and deliver the
-        // start ID so we know which request we're stopping when we finish the job
-//        Message msg = serviceHandler.obtainMessage();
-//        msg.arg1 = startId;
-//        msg.setData(intent.getExtras());
-//        serviceHandler.sendMessage(msg);
-
         // Request location updates
         locationClient.requestLocationUpdates(locationRequest, locationCallback, serviceLooper);
         // Start the connection to remote device
@@ -244,7 +236,6 @@ public class DynamicService extends Service {
     private void endService() {
         broadcastDynamicModeStatus(DynamicModeStatus.OFF, null);
         ServiceNotification.showDisconnect(DynamicService.this);
-        pi = null;
         stopSelf();
     }
 }
