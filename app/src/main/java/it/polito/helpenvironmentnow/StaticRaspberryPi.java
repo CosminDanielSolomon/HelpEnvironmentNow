@@ -1,14 +1,10 @@
 package it.polito.helpenvironmentnow;
 
-import android.bluetooth.BluetoothSocket;
 import android.util.JsonReader;
+import android.util.JsonWriter;
 import android.util.Log;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,116 +19,113 @@ public class StaticRaspberryPi {
 
     private String TAG = "StaticRaspberryPi";
     private final int STATIC_CHANNEL = 1;
-    private final byte[] ACK_CHUNK = "ok".getBytes();
     private long totalInsertions = 0;
+    private RfcommChannel rfcommChannel;
 
     // This method calls "connectAndReadFromRaspberry" and returns the number of measures received
     // and inserted into local database
     public long connectAndRead(String remoteDeviceMacAddress, MyDb myDb) {
-
         BtConnection btConn = new BtConnection();
-        RfcommChannel rfcommChannel = btConn.establishConnection(remoteDeviceMacAddress, STATIC_CHANNEL);
+        rfcommChannel = btConn.establishConnection(remoteDeviceMacAddress, STATIC_CHANNEL);
         if(rfcommChannel != null) {
             try {
-                readSaveChunks(rfcommChannel.getChannelInputStream(), rfcommChannel.getChannelOutputStream(), myDb);
-            } catch (IOException e) {
-                Log.e(TAG, "socket IOException during readSaveChunks");
-                e.printStackTrace();
+                readChunks(myDb);
+            } catch (IOException | IllegalStateException | NumberFormatException e) {
+                Log.e(TAG, "Exception during readChunks");
             } finally {
-                btConn.closeConnection();
+                rfcommChannel.close();
             }
         }
 
         return totalInsertions;
     }
 
-    private void readSaveChunks(InputStream socketInputStream, OutputStream socketOutputStream,
-                                MyDb myDb) throws IOException {
-        JsonReader reader = new JsonReader(new InputStreamReader(socketInputStream, StandardCharsets.UTF_8));
-        reader.setLenient(true); // it is needed in order to avoid MalformedJsonException before reading the second chunk and the others that follow
-        // this loop is interrupted by an IOException when the server has finished to send data and closes the socket or for any other IOException during data transfer
-        while (true) {
-            try {
-                List<Measure> measures = readChunk(reader);
+    private void readChunks(MyDb myDb) throws IOException, IllegalStateException,
+            NumberFormatException {
+        boolean finished = false;
+        // this loop is interrupted by an IOException OR when the server has finished to send data
+        while (!finished) {
+            JsonReader jsonReader = rfcommChannel.getJsonReader();
+            JsonWriter jsonWriter = rfcommChannel.getJsonWriter();
+            finished = readCompleted(jsonReader);
+            if (!finished) {
+                List<Measure> measures = readChunk(jsonReader);
                 // save measures into local database
-                myDb.insertMeasures(measures);
+                if (measures.size() > 0)
+                    myDb.insertMeasures(measures);
                 totalInsertions += measures.size();
-
-                // TODO remove ---
-                int min = Integer.MAX_VALUE, max = 0;
-                for(Measure me : measures) {
-                    if(me.timestamp < min)
-                        min = me.timestamp;
-                    if(me.timestamp > max)
-                        max = me.timestamp;
-                }
-                Log.d(TAG, "min: " + min +" max: " + max);
-                // TODO remove ---
                 // send ACK for the received chunk to the server
-                socketOutputStream.write(ACK_CHUNK);
-                socketOutputStream.flush();
-
-            } catch (IOException e) {
-                reader.close();
-                throw e;
+                sendAck(jsonWriter);
             }
         }
+    }
 
+    private boolean readCompleted(JsonReader jsonReader) throws IOException, IllegalStateException,
+            NumberFormatException {
+        jsonReader.beginObject(); // consumes the first '{' of the json object
+        String name = jsonReader.nextName();
+        if (name.equals("m")) {
+            return false;
+        } else if(name.equals("action")) {
+            jsonReader.nextString();
+            jsonReader.endObject();
+            return true;
+        }
+        return true;
     }
 
     // A chunk is a JSON format containing an array of measures
-    private List<Measure> readChunk(JsonReader reader) throws IOException {
+    private List<Measure> readChunk(JsonReader jsonReader) throws IOException, IllegalStateException,
+            NumberFormatException {
         List<Measure> measures = new ArrayList<>();
 
-        reader.beginObject(); // consumes the first '{' of the json object
-        String name = reader.nextName();
-        if (name.equals("m")) {
-            int sensorId = 0;
-            int timestamp = 0;
-            double data = 0;
-            String geohash = "";
-            double altitude = 0;
-
-            reader.beginArray(); // consumes the first '[' of the json array
-            while (reader.hasNext()) {
-
-                reader.beginObject();
-                    name = reader.nextName();
-                    if (name.equals("sensorID")) {
-                        sensorId = reader.nextInt();
-                    }
-                    name = reader.nextName();
-                    if (name.equals("timestamp")) {
-                        timestamp = reader.nextInt();
-                    }
-                    name = reader.nextName();
-                    if (name.equals("data")) {
-                        data = reader.nextDouble();
-                    }
-                    name = reader.nextName();
-                    if (name.equals("geohash")) {
-                        geohash = reader.nextString();
-                    }
-                    name = reader.nextName();
-                    if (name.equals("altitude")) {
-                        altitude = reader.nextDouble();
-                    }
-                reader.endObject();
-
-                Measure m = new Measure();
-                m.sensorId = sensorId;
-                m.timestamp = timestamp;
-                m.data = data;
-                m.geoHash = geohash;
-                m.altitude = altitude;
-
-                measures.add(m);
+        jsonReader.beginArray(); // consumes the first '[' of the json array
+        while (jsonReader.hasNext()) {
+            boolean sID = false, ts = false, dt = false, gh = false, al = false;
+            Measure m = new Measure();
+            jsonReader.beginObject();
+            while (jsonReader.hasNext()) {
+                String name = jsonReader.nextName();
+                switch (name) {
+                    case "sensorID":
+                        m.sensorId = jsonReader.nextInt();
+                        sID = true;
+                        break;
+                    case "timestamp":
+                        m.timestamp = jsonReader.nextInt();
+                        ts = true;
+                        break;
+                    case "data":
+                        m.data = jsonReader.nextDouble();
+                        dt = true;
+                        break;
+                    case "geohash":
+                        m.geoHash = jsonReader.nextString();
+                        gh = true;
+                        break;
+                    case "altitude":
+                        m.altitude = jsonReader.nextDouble();
+                        al = true;
+                        break;
+                }
             }
-            reader.endArray();
-            reader.endObject();
-
+            jsonReader.endObject();
+            if (sID && ts && dt && gh && al)
+                measures.add(m);
         }
+        jsonReader.endArray();
+        jsonReader.endObject();
 
         return measures;
+    }
+
+    private void sendAck(JsonWriter jsonWriter) throws IOException {
+        final String ACTION = "action";
+        final String OK = "ok";
+
+        jsonWriter.beginObject();
+        jsonWriter.name(ACTION).value(OK);
+        jsonWriter.endObject();
+        jsonWriter.flush();
     }
 }

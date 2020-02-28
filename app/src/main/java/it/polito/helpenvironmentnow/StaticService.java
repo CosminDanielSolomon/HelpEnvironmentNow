@@ -1,21 +1,16 @@
 package it.polito.helpenvironmentnow;
 
 import android.app.IntentService;
-import android.app.Notification;
 import android.content.Intent;
-import android.os.Build;
 import android.util.Log;
 
 import it.polito.helpenvironmentnow.Helper.ServiceNotification;
 import it.polito.helpenvironmentnow.MyWorker.MyWorkerManager;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 
-public class StaticService extends IntentService /*implements MyLocationListener*/ {
+public class StaticService extends IntentService {
 
     private final int SERVICE_ID = 1;
-
-//    private Location curLocation;
-    private boolean curLocationReady = false;
 
     public StaticService() {
         super("StaticService");
@@ -32,19 +27,8 @@ public class StaticService extends IntentService /*implements MyLocationListener
 
     @Override
     protected void onHandleIntent(Intent intent) {
-
-//        LocationInfo.getCurrentLocation(getApplicationContext(), this);
-//        /* Wait until the device current location is returned. When location is ready, locationCompleted(...)
-//         * is called and sets curLocationReady to true and so the while cycle will be interrupted
-//         * and the field curLocation will contain latitude, longitude, altitude */
-//        while(!curLocationReady) {
-//            int WAIT_LOCATION_MS = 500;
-//            SystemClock.sleep(WAIT_LOCATION_MS);
-//        }
-
         // Open the db connection. It will be used inside StaticRaspberryPi object
         MyDb myDb = new MyDb(getApplicationContext());
-
         /* the remote device is the the Raspberry Pi device */
         String remoteDeviceMacAddress = intent.getStringExtra("remoteMacAddress");
         StaticRaspberryPi rPi = new StaticRaspberryPi();
@@ -57,10 +41,4 @@ public class StaticService extends IntentService /*implements MyLocationListener
         }
         Log.d("StaticService", "Service Completed");
     }
-
-//    @Override
-//    public void locationCompleted(Location location) {
-//        curLocation = location;
-//        curLocationReady = true;
-//    }
 }

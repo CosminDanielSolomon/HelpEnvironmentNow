@@ -157,7 +157,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(getApplicationContext(), StaticService.class);
-                intent.putExtra("remoteMacAddress", "B8:27:EB:47:CF:BE");
+                intent.putExtra("remoteMacAddress", "B8:27:EB:C4:15:D6");
+                //intent.putExtra("remoteMacAddress", "B8:27:EB:47:CF:BE");
                 ContextCompat.startForegroundService(getApplicationContext(), intent);
             }
         });

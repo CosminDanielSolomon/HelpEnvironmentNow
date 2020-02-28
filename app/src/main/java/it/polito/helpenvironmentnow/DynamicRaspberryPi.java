@@ -99,7 +99,7 @@ public class DynamicRaspberryPi implements MyLocationListener {
 
                 }
                 return true;
-            } catch (IOException e) {
+            } catch (IOException | IllegalStateException | NumberFormatException e) {
                 releaseResources();
                 return false;
             }
@@ -108,37 +108,41 @@ public class DynamicRaspberryPi implements MyLocationListener {
     }
 
     // A chunk is a JSON format containing an array of measures
-    private List<Measure> readChunk(JsonReader reader) throws IOException {
+    private List<Measure> readChunk(JsonReader jsonReader) throws IOException, IllegalStateException,
+            NumberFormatException {
         List<Measure> measures = new ArrayList<>();
 
-        reader.beginObject(); // consumes the first '{' of the json object
-        String name = reader.nextName();
+        jsonReader.beginObject(); // consumes the first '{' of the json object
+        String name = jsonReader.nextName();
         if (name.equals("m")) {
-
-            reader.beginArray(); // consumes the first '[' of the json array
-            while (reader.hasNext()) {
+            jsonReader.beginArray(); // consumes the first '[' of the json array
+            while (jsonReader.hasNext()) { // loop for the objects inside the array
                 boolean sID = false, ts = false, dt = false;
                 Measure m = new Measure();
-                reader.beginObject();
-                while (reader.hasNext()) {
-                    name = reader.nextName();
-                    if (name.equals("sensorID")) {
-                        m.sensorId = reader.nextInt();
-                        sID = true;
-                    } if (name.equals("timestamp")) {
-                        m.timestamp = reader.nextInt();
-                        ts = true;
-                    } if (name.equals("data")) {
-                        m.data = reader.nextDouble();
-                        dt = true;
+                jsonReader.beginObject();
+                while (jsonReader.hasNext()) { // loop for the elements inside single object
+                    name = jsonReader.nextName();
+                    switch (name) {
+                        case "sensorID":
+                            m.sensorId = jsonReader.nextInt();
+                            sID = true;
+                            break;
+                        case "timestamp":
+                            m.timestamp = jsonReader.nextInt();
+                            ts = true;
+                            break;
+                        case "data":
+                            m.data = jsonReader.nextDouble();
+                            dt = true;
+                            break;
                     }
                 }
-                reader.endObject();
+                jsonReader.endObject();
                 if (sID && ts && dt)
                     measures.add(m);
             }
-            reader.endArray();
-            reader.endObject();
+            jsonReader.endArray();
+            jsonReader.endObject();
         }
 
         return measures;
@@ -158,7 +162,7 @@ public class DynamicRaspberryPi implements MyLocationListener {
                 try {
                     writeLocation(writer, geohash, altitude);
                     return readAndCheckAck(jsonReader);
-                } catch (IOException e) {
+                } catch (IOException | IllegalStateException | NumberFormatException e) {
                     Log.e(TAG, "Connection end in wrong way!");
                     return false;
                 } finally {
@@ -189,7 +193,8 @@ public class DynamicRaspberryPi implements MyLocationListener {
         locationReady.set(true);
     }
 
-    private boolean readAndCheckAck(JsonReader jsonReader) throws IOException {
+    private boolean readAndCheckAck(JsonReader jsonReader) throws IOException, IllegalStateException,
+            NumberFormatException {
         final String expectedAck = "ok";
         jsonReader.beginObject();
         jsonReader.nextName();
