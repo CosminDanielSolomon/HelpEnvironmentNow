@@ -50,16 +50,18 @@ public class DynamicRaspberryPi implements MyLocationListener {
         return result;
     }
 
-    public void requestData() throws IOException {
+    public boolean requestData() {
         if(rfcommChannel != null) {
             JsonWriter jsonWriter = rfcommChannel.getJsonWriter();
             try {
                 writeActionGET(jsonWriter);
+                return true;
             } catch (IOException e) {
                 releaseResources();
-                throw e;
+                return false;
             }
         }
+        return false;
     }
 
     private void writeActionGET(JsonWriter jsonWriter) throws IOException {
@@ -72,7 +74,7 @@ public class DynamicRaspberryPi implements MyLocationListener {
                 .flush();
     }
 
-    public void read() throws IOException {
+    public boolean read() {
         if(rfcommChannel != null) {
             JsonReader jsonReader = rfcommChannel.getJsonReader();
             try {
@@ -96,11 +98,13 @@ public class DynamicRaspberryPi implements MyLocationListener {
                     // TODO remove ---
 
                 }
+                return true;
             } catch (IOException e) {
                 releaseResources();
-                throw e;
+                return false;
             }
         }
+        return false;
     }
 
     // A chunk is a JSON format containing an array of measures
@@ -140,7 +144,7 @@ public class DynamicRaspberryPi implements MyLocationListener {
         return measures;
     }
 
-    public void sendLocation() {
+    public boolean setDynamicModeOff() {
         if (rfcommChannel != null) {
             boolean started = LocationInfo.getCurrentLocation(context, this);
             if (started) {
@@ -150,17 +154,21 @@ public class DynamicRaspberryPi implements MyLocationListener {
                 String geohash = LocationInfo.encodeLocation(lastLocation);
                 double altitude = lastLocation.getAltitude();
                 JsonWriter writer = rfcommChannel.getJsonWriter();
+                JsonReader jsonReader = rfcommChannel.getJsonReader();
                 try {
                     writeLocation(writer, geohash, altitude);
+                    return readAndCheckAck(jsonReader);
                 } catch (IOException e) {
                     Log.e(TAG, "Connection end in wrong way!");
+                    return false;
                 } finally {
                     releaseResources();
                 }
             } else {
-                // TODO inform user that permissions are needed
+                return false;
             }
         }
+        return false;
     }
 
     private void writeLocation(JsonWriter writer, String geohash, double altitude) throws IOException {
@@ -179,17 +187,6 @@ public class DynamicRaspberryPi implements MyLocationListener {
     public void locationCompleted(Location location) {
         lastLocation = location;
         locationReady.set(true);
-    }
-
-    public boolean waitLocationAck() {
-        JsonReader jsonReader = rfcommChannel.getJsonReader();
-        try {
-            return readAndCheckAck(jsonReader);
-        } catch (IOException e) {
-            return false;
-        } finally {
-            releaseResources();
-        }
     }
 
     private boolean readAndCheckAck(JsonReader jsonReader) throws IOException {

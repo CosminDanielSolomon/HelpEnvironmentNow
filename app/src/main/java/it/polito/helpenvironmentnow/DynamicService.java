@@ -24,7 +24,6 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -47,6 +46,8 @@ public class DynamicService extends Service {
 
     private final int SERVICE_ID = 2;
     private String TAG = "DynamicService"; // String used for debug in Log.d() method
+    private final int INITIAL_DELAY = 3000;
+    private final int LOOP_DELAY = 20000;
 
     private Looper serviceLooper;
     private ServiceHandler serviceHandler;
@@ -68,7 +69,7 @@ public class DynamicService extends Service {
             if(pi.connect(remoteDevice.getAddress())) {
                 saveDynamicModeStatus(DynamicModeStatus.CONNECTED, remoteDevice);
                 broadcastDynamicModeStatus(DynamicModeStatus.CONNECTED, remoteDevice);
-                serviceHandler.postDelayed(runnableLoop, 3000);
+                serviceHandler.postDelayed(runnableLoop, INITIAL_DELAY);
                 Log.d(TAG, "runnableConnect SUCCESS");
             } else {
                 endService();
@@ -79,14 +80,18 @@ public class DynamicService extends Service {
     private Runnable runnableLoop = new Runnable() {
         @Override
         public void run() {
-            try {
-                pi.requestData();
-                pi.read();
-                Log.d(TAG, "read SUCCESS");
-                serviceHandler.postDelayed(this, 15000);
-                if (stop.get())
-                    serviceHandler.removeCallbacks(this);
-            } catch (IOException e) {
+            boolean result = pi.requestData();
+            if (result) {
+                result = pi.read();
+                if (result) {
+                    Log.d(TAG, "read SUCCESS");
+                    serviceHandler.postDelayed(this, LOOP_DELAY);
+                    if (stop.get())
+                        serviceHandler.removeCallbacks(this);
+                } else {
+                    endService();
+                }
+            } else {
                 endService();
             }
         }
@@ -96,8 +101,12 @@ public class DynamicService extends Service {
         @Override
         public void run() {
             if (pi != null) {
-                pi.sendLocation();
-                Log.d(TAG, "runnableEnd SUCCESS");
+                boolean result = pi.setDynamicModeOff();
+                if(result) {
+                    Log.d(TAG, "runnableEnd SUCCESS");
+                } else {
+                    ServiceNotification.showDisconnect(DynamicService.this);
+                }
             }
         }
     };
@@ -137,6 +146,7 @@ public class DynamicService extends Service {
                     currentPosition.longitude = location.getLongitude();
                     currentPosition.altitude = location.getAltitude();
                     positions.add(currentPosition);
+                    Log.d(TAG, "" + timestamp);
                 }
                 Log.d(TAG, "Positions: " + positions.size());
                 myDb.insertPositions(positions);
@@ -163,12 +173,12 @@ public class DynamicService extends Service {
     // representing the start request. Do not call this method directly.
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "enter onstartcommand");
         // Check for permissions. If not granted, stop the service.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (getApplicationContext().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
                     != PackageManager.PERMISSION_GRANTED) {
                 endService();
-                // TODO send broadcast permissions needed
             }
         }
         // Get info from the activity that started this service
@@ -234,6 +244,7 @@ public class DynamicService extends Service {
     }
 
     private void endService() {
+        pi = null;
         broadcastDynamicModeStatus(DynamicModeStatus.OFF, null);
         ServiceNotification.showDisconnect(DynamicService.this);
         stopSelf();

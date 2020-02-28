@@ -55,9 +55,9 @@ public class ServiceNotification {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(service, channelId)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle("CONNECTION LOST!")
-                .setContentText("Reconnect to the Pi, otherwise it will remain in an unstable state")
                 .setStyle(new NotificationCompat.BigTextStyle()
-                        .bigText("Reconnect to the Pi, otherwise it will remain in an unstable state"))
+                        .bigText("Check that geolocation is on for the app and reconnect to the Pi," +
+                                " otherwise it will remain in an unstable state"))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true);
