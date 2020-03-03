@@ -28,7 +28,7 @@ import it.polito.helpenvironmentnow.Storage.MyDb;
 public class RaspberryPi {
 
     private String TAG = "RaspberryPi";
-    private static final int MAX_CONNECTION_ATTEMPTS = 15; // the max number to retry establish bluetooth connection if fails
+    private static final int MAX_CONNECTION_ATTEMPTS = 10; // the max number to retry establish bluetooth connection if fails
     private static final int BLUETOOTH_MSECONDS_SLEEP = 3000; // milliseconds to sleep if open connection fails
     private final byte[] ACK_CHUNK = "ok".getBytes();
 
@@ -75,7 +75,7 @@ public class RaspberryPi {
                     OutputStream socketOutputStream = socket.getOutputStream();
                     readMatchSaveChunks(socketInputStream, socketOutputStream, location, myDb);
                 } catch (IOException e) {
-                    Log.e(TAG, "socket IOException during readMatchSaveChunks");
+                    Log.e(TAG, "Exception during readMatchSaveChunks");
                     e.printStackTrace();
                 } finally {
                     try {
@@ -110,14 +110,16 @@ public class RaspberryPi {
     }
 
     private void readMatchSaveChunks(InputStream socketInputStream, OutputStream socketOutputStream,
-                                     Location loc, MyDb myDb) throws IOException {
-        JsonReader reader = new JsonReader(new InputStreamReader(socketInputStream, StandardCharsets.UTF_8));
-        reader.setLenient(true); // it is needed in order to avoid MalformedJsonException before reading the second chunk and the others that follow
+                                     Location loc, MyDb myDb) {
+
+        InputStreamReader isr = new InputStreamReader(socketInputStream, StandardCharsets.UTF_8);
         Matcher matcher = new Matcher();
-        // this loop is interrupted by an IOException when the server has finished to send data and closes the socket or for any other IOException during data transfer
-        while (true) {
+        // this loop is interrupted by an IOException when the server has finished to send data and closes the socket or for any other Exception during data transfer
+        boolean finished = false;
+        while (!finished) {
+            JsonReader jsonReader = new JsonReader(isr);
             try {
-                List<Measure> measures = readChunk(reader);
+                List<Measure> measures = readChunk(jsonReader);
                 // associate position to each measure
                 matcher.matchMeasuresAndPositions(loc, measures);
                 // save measures into local database
@@ -134,63 +136,65 @@ public class RaspberryPi {
                 }
                 Log.d(TAG, "min: " + min +" max: " + max);
                 // TODO remove ---
+
                 // send ACK for the received chunk to the server
                 socketOutputStream.write(ACK_CHUNK);
                 socketOutputStream.flush();
 
-            } catch (IOException e) {
-                reader.close();
-                throw e;
+            } catch (IOException | IllegalStateException | NumberFormatException e) {
+                closeReader(jsonReader);
+                finished = true;
             }
         }
 
     }
 
     // A chunk is a JSON format containing an array of measures
-    private List<Measure> readChunk(JsonReader reader) throws IOException {
+    private List<Measure> readChunk(JsonReader reader) throws IOException, IllegalStateException,
+            NumberFormatException {
         List<Measure> measures = new ArrayList<>();
 
         reader.beginObject(); // consumes the first '{' of the json object
         String name = reader.nextName();
         if (name.equals("m")) {
-            int sensorId = 0;
-            int timestamp = 0;
-            double data = 0;
-            String geohash = "";
-            double altitude = 0;
-
             reader.beginArray(); // consumes the first '[' of the json array
             while (reader.hasNext()) {
-
-                reader.beginObject();
-                    name = reader.nextName();
-                    if (name.equals("sensorID")) {
-                        sensorId = reader.nextInt();
-                    }
-                    name = reader.nextName();
-                    if (name.equals("timestamp")) {
-                        timestamp = reader.nextInt();
-                    }
-                    name = reader.nextName();
-                    if (name.equals("data")) {
-                        data = reader.nextDouble();
-                    }
-                reader.endObject();
-
+                boolean sID = false, ts = false, dt = false;
                 Measure m = new Measure();
-                m.sensorId = sensorId;
-                m.timestamp = timestamp;
-                m.data = data;
-                m.geoHash = geohash;
-                m.altitude = altitude;
-
-                measures.add(m);
+                reader.beginObject();
+                while (reader.hasNext()) {
+                    name = reader.nextName();
+                    switch (name) {
+                        case "sensorID":
+                            m.sensorId = reader.nextInt();
+                            sID = true;
+                            break;
+                        case "timestamp":
+                            m.timestamp = reader.nextInt();
+                            ts = true;
+                            break;
+                        case "data":
+                            m.data = reader.nextDouble();
+                            dt = true;
+                            break;
+                    }
+                }
+                reader.endObject();
+                if (sID && ts && dt)
+                    measures.add(m);
             }
             reader.endArray();
             reader.endObject();
-
         }
 
         return measures;
+    }
+
+    private void closeReader(JsonReader jsonReader) {
+        try {
+            jsonReader.close();
+        } catch (IOException e) {
+            Log.e(TAG, "Close JsonReader failed!");
+        }
     }
 }

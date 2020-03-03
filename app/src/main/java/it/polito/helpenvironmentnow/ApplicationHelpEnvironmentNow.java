@@ -54,23 +54,18 @@ public class ApplicationHelpEnvironmentNow extends Application implements Bootst
 
     @Override
     public void didDetermineStateForRegion(int state, Region arg1) {
-        if(state == INSIDE) {
-            try {
-                beaconManager.addRangeNotifier(this);
-                beaconManager.startRangingBeaconsInRegion(region);
-                Log.d(TAG, "start RANGING beacons in region");
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
+        try {
+            beaconManager.addRangeNotifier(this);
+            beaconManager.startRangingBeaconsInRegion(region);
+            Log.d(TAG, "start RANGING beacons in region");
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
     }
 
     @Override
     public void didEnterRegion(Region arg0) {
         Log.d(TAG, "Got a didEnterRegion call");
-        // This call to disable will make it so the activity below only gets launched the first time a beacon is seen (until the next time the app is launched)
-        // if you want the Activity to launch every single time beacons come into view, remove this call.
-        //regionBootstrap.disable();
     }
 
     @Override

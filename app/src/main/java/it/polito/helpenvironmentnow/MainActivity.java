@@ -35,7 +35,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        /* TODO remove this part */
+
+        /* TODO remove this part - used only for testing */
         Button btnConnect = findViewById(R.id.buttonConnect);
         btnConnect.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -46,7 +47,8 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "startService(...) performed");
             }
         });
-        /* TODO remove this part */
+        /* TODO remove this part - used only for testing*/
+
 
         requestFineLocationPermission();
     }
