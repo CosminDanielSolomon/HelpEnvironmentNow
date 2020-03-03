@@ -21,14 +21,14 @@ import it.polito.helpenvironmentnow.Helper.Matcher;
 import it.polito.helpenvironmentnow.Storage.Measure;
 import it.polito.helpenvironmentnow.Storage.MyDb;
 
-// The main purpose of this class is to connect to the Raspberry Pi device, read the stream of bytes,
-// parse it to obtain each measure and associate it(matching) with a location. While receiving the
-// data, the measures are inserted into a local database.
-// At the end the Raspberry Pi is acknowledged and the socket connection is close.
+// The main purpose of this class is to connect to the Raspberry Pi device, read the measures in
+// JSON and associate each measure with the location(matching). While receiving the data, the
+// measures are inserted into a local database.
+// After each chunk of data received the Raspberry Pi is acknowledged.
 public class RaspberryPi {
 
     private String TAG = "RaspberryPi";
-    private static final int MAX_CONNECTION_ATTEMPTS = 10; // the max number to retry establish bluetooth connection if fails
+    private static final int MAX_CONNECTION_ATTEMPTS = 10; // the max number to retry bluetooth connection if it fails
     private static final int BLUETOOTH_MSECONDS_SLEEP = 3000; // milliseconds to sleep if open connection fails
     private final byte[] ACK_CHUNK = "ok".getBytes();
 
@@ -63,7 +63,6 @@ public class RaspberryPi {
                     socket.connect();
                 } catch (IOException e) {
                     Log.d(TAG, "Socket connect() failed!");
-                    e.printStackTrace();
                     if (attempt < MAX_CONNECTION_ATTEMPTS)
                         SystemClock.sleep(BLUETOOTH_MSECONDS_SLEEP); // sleep before retry to connect
                 }

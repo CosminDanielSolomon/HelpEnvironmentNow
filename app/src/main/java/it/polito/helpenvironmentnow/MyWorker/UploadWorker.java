@@ -33,7 +33,6 @@ public class UploadWorker extends Worker {
         Log.d(TAG, "doWork() called");
         boolean sendResult;
         if(Looper.myLooper() == null) {
-            Log.d(TAG, "Looper prepare called");
             Looper.prepare();
         }
         MyDb myDb = new MyDb(context);

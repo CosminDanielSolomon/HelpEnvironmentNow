@@ -18,7 +18,7 @@ import com.google.android.material.snackbar.Snackbar;
 
 public class MainActivity extends AppCompatActivity {
 
-    private String TAG = "MainActivity"; // This string is used as tag for debug
+    private String TAG = "MainActivity"; // This string is used as tag for debug messages
     private static final int PERMISSION_REQUEST_FINE_LOCATION = 1;
 
     @Override
@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(getApplicationContext(), ClassicService.class);
-                intent.putExtra("remoteMacAddress", "B8:27:EB:47:CF:BE");
+                intent.putExtra("remoteMacAddress", "B8:27:EB:C4:15:D6");
                 ContextCompat.startForegroundService(getApplicationContext(), intent);
                 Log.d(TAG, "startService(...) performed");
             }

@@ -44,7 +44,7 @@ public class ConfigActivity extends AppCompatActivity {
                     SharedPreferences.Editor editor = sharedPref.edit();
                     editor.putString(IP_KEY, ip);
                     editor.putString(PORT_KEY, port);
-                    editor.apply();
+                    editor.commit();
                     Snackbar.make(constraintLayout, "IP and PORT saved",
                             Snackbar.LENGTH_LONG).show();
                 }
