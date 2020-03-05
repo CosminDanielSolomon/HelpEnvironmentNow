@@ -17,7 +17,7 @@ public class Matcher {
     private final double defaultLatitude = 0.0;
     private final double defaultLongitude = 0.0;
 
-    private final int MAX_GAP = 30; // the max number of seconds acceptable for the match between measure timestamp and position timestamp
+    private final int MAX_GAP = 30; // the max number of seconds acceptable for the match between measure's timestamp and position's timestamp
     private final int NO_MATCH = -1; // value that means that it was not possible to find a match with a position for the measure
 
     // This method receives the list of measures that need to be associated to a location.

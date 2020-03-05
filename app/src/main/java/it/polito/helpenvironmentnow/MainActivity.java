@@ -82,9 +82,7 @@ public class MainActivity extends AppCompatActivity {
                 BtDevice btDevice = new BtDevice(deviceName, deviceHardwareAddress);
                 if(!scanningResult.contains(btDevice)) {
                     scanningResult.add(btDevice);
-                    Log.d(TAG, "FIRST: " + btDevice.getName() + " " + btDevice.getAddress());
                 } else {
-                    Log.d(TAG, "DUPLICATE: " + btDevice.getName() + " " + btDevice.getAddress());
                     // usually the second time a device is received, it contains its name instead
                     // of "null" so I replace "null" with the bluetooth name
                     int index = scanningResult.indexOf(btDevice);
@@ -147,19 +145,6 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Intent intent = new Intent(getApplicationContext(), ConfigActivity.class);
                 startActivity(intent);
-            }
-        });
-        /* TODO remove this part(END) */
-
-        /* TODO remove this part(START) and the corresponding button from activity_main.xml */
-        Button btnConnect = findViewById(R.id.buttonConnect);
-        btnConnect.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(getApplicationContext(), StaticService.class);
-                intent.putExtra("remoteMacAddress", "B8:27:EB:C4:15:D6");
-                //intent.putExtra("remoteMacAddress", "B8:27:EB:47:CF:BE");
-                ContextCompat.startForegroundService(getApplicationContext(), intent);
             }
         });
         /* TODO remove this part(END) */
@@ -342,10 +327,7 @@ public class MainActivity extends AppCompatActivity {
                 .putExtra(getString(R.string.DEVICE_ADDR), btDevice.getAddress());
         ContextCompat.startForegroundService(getApplicationContext(), intent);
         setLayoutConnecting(btDevice);
-        // register receiver for updates from DynamicService
-        IntentFilter statusIntentFilter = new IntentFilter(DynamicModeStatus.BROADCAST_ACTION);
-        LocalBroadcastManager.getInstance(this).registerReceiver(connectionStateReceiver,
-                statusIntentFilter);
+        registerConnectionReceiver();
     }
 
     private void stopDynamicService() {
@@ -373,12 +355,14 @@ public class MainActivity extends AppCompatActivity {
                 String s2 = getString(R.string.connect_dev) + " " + devName + " (" + devAddress + ")";
                 tvDynamicModeContent.setText(s2);
                 pbTop.setVisibility(View.VISIBLE);
+                registerConnectionReceiver();
                 break;
             case DynamicModeStatus.CONNECTED:
                 dynamicLayout.setBackgroundColor(Color.parseColor("#068DE5"));
                 switchDynamicMode.setChecked(true);
                 String s3 = getString(R.string.connected_dev) + " " + devName + " (" + devAddress + ")";
                 tvDynamicModeContent.setText(s3);
+                registerConnectionReceiver();
                 break;
         }
     }
@@ -512,6 +496,13 @@ public class MainActivity extends AppCompatActivity {
                 setLayoutConnected(btDevice);
             }
         }
+    }
+
+    private void registerConnectionReceiver() {
+        // register receiver for updates from DynamicService
+        IntentFilter statusIntentFilter = new IntentFilter(DynamicModeStatus.BROADCAST_ACTION);
+        LocalBroadcastManager.getInstance(this).registerReceiver(connectionStateReceiver,
+                statusIntentFilter);
     }
 
 }

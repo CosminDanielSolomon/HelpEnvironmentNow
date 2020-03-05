@@ -32,6 +32,7 @@ public class StaticRaspberryPi {
                 readChunks(myDb);
             } catch (IOException | IllegalStateException | NumberFormatException e) {
                 Log.e(TAG, "Exception during readChunks");
+                e.printStackTrace();
             } finally {
                 rfcommChannel.close();
             }
@@ -46,7 +47,6 @@ public class StaticRaspberryPi {
         // this loop is interrupted by an IOException OR when the server has finished to send data
         while (!finished) {
             JsonReader jsonReader = rfcommChannel.getJsonReader();
-            JsonWriter jsonWriter = rfcommChannel.getJsonWriter();
             finished = readCompleted(jsonReader);
             if (!finished) {
                 List<Measure> measures = readChunk(jsonReader);
@@ -55,6 +55,7 @@ public class StaticRaspberryPi {
                     myDb.insertMeasures(measures);
                 totalInsertions += measures.size();
                 // send ACK for the received chunk to the server
+                JsonWriter jsonWriter = rfcommChannel.getJsonWriter();
                 sendAck(jsonWriter);
             }
         }

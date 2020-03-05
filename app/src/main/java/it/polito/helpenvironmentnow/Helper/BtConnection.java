@@ -7,8 +7,6 @@ import android.os.SystemClock;
 import android.util.Log;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 
 public class BtConnection {
@@ -37,7 +35,7 @@ public class BtConnection {
                         Log.d(TAG, "Socket connect() attempt:" + attempt);
                         socket.connect();
                     } catch (IOException e) {
-                        Log.d(TAG, "Socket connect() failed!");
+                        Log.e(TAG, "Socket connect() failed!");
                         e.printStackTrace();
                         if (attempt < MAX_CONNECTION_ATTEMPTS)
                             SystemClock.sleep(BLUETOOTH_MSECONDS_SLEEP); // sleep before retry to connect

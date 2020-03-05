@@ -84,19 +84,6 @@ public class DynamicRaspberryPi implements MyLocationListener {
                     matcher.matchMeasuresAndPositions(measures, myDb);
                     // save measures into local database
                     myDb.insertMeasures(measures);
-
-                    // TODO remove ---
-                    int min = Integer.MAX_VALUE, max = 0;
-                    for(Measure me : measures) {
-                        if(me.timestamp < min)
-                            min = me.timestamp;
-                        if(me.timestamp > max)
-                            max = me.timestamp;
-                        Log.d(TAG, me.sensorId + " " + me.timestamp + " " + me.data + " " + me.geoHash + " " + me.altitude);
-                    }
-                    Log.d(TAG, "MIN: " + min +" MAX: " + max);
-                    // TODO remove ---
-
                 }
                 return true;
             } catch (IOException | IllegalStateException | NumberFormatException e) {
@@ -163,7 +150,7 @@ public class DynamicRaspberryPi implements MyLocationListener {
                     writeLocation(writer, geohash, altitude);
                     return readAndCheckAck(jsonReader);
                 } catch (IOException | IllegalStateException | NumberFormatException e) {
-                    Log.e(TAG, "Connection end in wrong way!");
+                    Log.e(TAG, "Connection ended in wrong way!");
                     return false;
                 } finally {
                     releaseResources();

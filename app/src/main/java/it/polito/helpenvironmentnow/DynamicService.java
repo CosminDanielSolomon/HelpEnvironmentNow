@@ -146,9 +146,7 @@ public class DynamicService extends Service {
                     currentPosition.longitude = location.getLongitude();
                     currentPosition.altitude = location.getAltitude();
                     positions.add(currentPosition);
-                    Log.d(TAG, "" + timestamp);
                 }
-                Log.d(TAG, "Positions: " + positions.size());
                 myDb.insertPositions(positions);
             }
         };
@@ -173,7 +171,6 @@ public class DynamicService extends Service {
     // representing the start request. Do not call this method directly.
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "enter onstartcommand");
         // Check for permissions. If not granted, stop the service.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (getApplicationContext().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)

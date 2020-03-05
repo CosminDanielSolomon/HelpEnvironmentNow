@@ -1,7 +1,5 @@
 package it.polito.helpenvironmentnow.Helper;
 
-import androidx.annotation.Nullable;
-
 import java.util.Objects;
 
 public class BtDevice {

@@ -19,7 +19,6 @@ public class HeRestClient {
     // Server URL
     private String ipAddress = "192.168.137.1";
     private String port = "8443";
-    private String HE_WEB_SERVICE_URL = "https://" + ipAddress + ":" + port + "/HelpEnvironment/helpenvironment/he/measures";
 
     private Context context;
     private SyncHttpClient restClient;
@@ -30,7 +29,7 @@ public class HeRestClient {
         restClient = new SyncHttpClient();
         acceptAllCertificate();
         restClient.setBasicAuth("androidClient","a147_mx5:3");
-        restClient.setResponseTimeout(3600*1000);
+        restClient.setResponseTimeout(120*1000);
         updateServerAddress(context);
     }
 
@@ -48,6 +47,8 @@ public class HeRestClient {
                 sendResult = false;
             }
         };
+
+        String HE_WEB_SERVICE_URL = "https://" + ipAddress + ":" + port + "/HelpEnvironment/helpenvironment/he/measures";
         StringEntity entity = new StringEntity(dataBlock, StandardCharsets.UTF_8);
         restClient.put(context, HE_WEB_SERVICE_URL, entity, "application/json", responseHandler);
 
@@ -80,8 +81,6 @@ public class HeRestClient {
         String PORT_DEF = context.getString(R.string.PORT_DEF);
         String ipSave = sharedPref.getString(IP_KEY, IP_DEF);
         String portSave = sharedPref.getString(PORT_KEY, PORT_DEF);
-        Log.d("Client", "ipSave:"+ipSave);
-        Log.d("Client", "portSave:"+portSave);
         if(!ipSave.equals(IP_DEF))
             ipAddress = ipSave;
         if(!portSave.equals(PORT_DEF))
