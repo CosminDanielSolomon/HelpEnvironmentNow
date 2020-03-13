@@ -68,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
     private List<BtDevice> scanningResult = new ArrayList<>();
     private BluetoothAdapter bluetoothAdapter;
     private LocationRequest locationRequest; // This field is used for the DYNAMIC mode
-    private ConnectionStateReceiver connectionStateReceiver = new ConnectionStateReceiver();
+    private ConnectionStateReceiver connectionStateReceiver;
 
     // Create a BroadcastReceiver for ACTION_FOUND.
     private BroadcastReceiver receiver = new BroadcastReceiver() {
@@ -484,7 +484,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "received from service: " + dynamicModeStatus);
             if (dynamicModeStatus == DynamicModeStatus.OFF) {
                 // the connection has been interrupted
-                LocalBroadcastManager.getInstance(getApplicationContext()).unregisterReceiver(connectionStateReceiver);
+                unregisterConnectionReceiver();
                 setLayoutOff();
                 changeButtonState(false);
                 showConnectionFailedSnackbar();
@@ -500,9 +500,19 @@ public class MainActivity extends AppCompatActivity {
 
     private void registerConnectionReceiver() {
         // register receiver for updates from DynamicService
+        connectionStateReceiver = new ConnectionStateReceiver();
         IntentFilter statusIntentFilter = new IntentFilter(DynamicModeStatus.BROADCAST_ACTION);
         LocalBroadcastManager.getInstance(this).registerReceiver(connectionStateReceiver,
                 statusIntentFilter);
     }
 
+    private void unregisterConnectionReceiver() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(connectionStateReceiver);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(connectionStateReceiver);
+    }
 }
